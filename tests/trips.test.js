@@ -89,6 +89,9 @@ describe('Tworzenie wyjazdu (WF-03)', () => {
     expect(res.status).toBe(200);
     const found = res.body.trips.some(t => t.id === tripId);
     expect(found).toBe(true);
+
+    const trip = res.body.trips.find(t => t.id === tripId);
+    expect(trip.role).toBe('ORGANIZER'); // TC-02
   });
 
   test('TC-06 dane bez name', async () => {
