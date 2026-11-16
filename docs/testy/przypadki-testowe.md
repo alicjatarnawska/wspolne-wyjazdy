@@ -67,7 +67,7 @@ Limit dlugosci: nazwa i miejsce docelowe maksymalnie 100 znakow.
 - Warunki: uzytkownik jest zalogowany
 - Kroki: wpisuje nazwe dluzsza niz 100 znakow
 - Oczekiwany wynik: wyjazd sie nie tworzy, komunikat o zbyt dlugiej nazwie (kod 400)
-- Wynik: BLAD - backend zwraca 500 zamiast 400 (zobacz B-01)
+- Wynik: OK (po poprawce B-01, test ponowny 16.11.2026)
 
 ### TC-10 Uzytkownik niezalogowany
 - Warunki: uzytkownik nie jest zalogowany
@@ -79,7 +79,7 @@ Limit dlugosci: nazwa i miejsce docelowe maksymalnie 100 znakow.
 - Warunki: uzytkownik jest zalogowany
 - Kroki: wpisuje jako nazwe same spacje
 - Oczekiwany wynik: wyjazd sie nie tworzy, komunikat ze nazwa jest wymagana (kod 400)
-- Wynik: BLAD - wyjazd tworzy sie z pusta nazwa, kod 201 (zobacz B-02)
+- Wynik: OK (po poprawce B-02, test ponowny 16.11.2026)
 
 
 ## Uprawnienia (WF-05)
@@ -104,14 +104,14 @@ Limit dlugosci: nazwa i miejsce docelowe maksymalnie 100 znakow.
 - Opis: przy nazwie dluzszej niz 100 znakow backend zwraca 500 ("Nie udalo sie utworzyc wyjazdu")
   zamiast 400. Baza odrzuca zapis (VARCHAR(100)), a createTrip nie obsluguje tego bledu.
 - Propozycja: sprawdzac dlugosc nazwy i miejsca (max 100 znakow) w walidacji na poczatku createTrip.
-- Status: zgloszony
+- Status: poprawiony - potwierdzony testem ponownym 16.11.2026
 
 ### B-02 Mozna utworzyc wyjazd z nazwa z samych spacji
 - Wykryty przez: TC-13
 - Opis: backend sprawdza, czy nazwa nie jest pusta, przed trim(), wiec '   ' przechodzi walidacje
   i zapisuje sie jako pusty napis. Kod 201 zamiast 400. Dotyczy tez destination.
 - Propozycja: najpierw trim(), potem sprawdzenie; dodatkowo CHECK w bazie.
-- Status: zgloszony
+- Status: poprawiony - potwierdzony testem ponownym 16.11.2026
 
 
 ## Uwagi dla backendu
