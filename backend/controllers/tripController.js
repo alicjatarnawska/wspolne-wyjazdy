@@ -7,9 +7,22 @@ exports.createTrip = async (req, res) => {
   const { name, destination, start_date, end_date, description } = req.body;
   const userId = req.user.id;
 
-  if (!name || !destination || !start_date || !end_date) {
+  if (typeof name !== 'string' || !name.trim() || typeof destination !== 'string' || !destination.trim() || !start_date || !end_date) {
     return res.status(400).json({
       error: 'Nazwa, miejsce docelowe, data rozpoczęcia i zakończenia są wymagane.',
+    });
+  }
+
+  // walidacja długości nazwy wyjazdu (maksymalnie 100 znaków)
+  if (name.trim().length > 100) {
+    return res.status(400).json({
+      error: 'Nazwa wyjazdu może mieć maksymalnie 100 znaków.',
+    });
+  }
+
+  if (destination.trim().length > 100) {
+    return res.status(400).json({
+      error: 'Miejsce docelowe może mieć maksymalnie 100 znaków.',
     });
   }
   
