@@ -1,4 +1,4 @@
-//import biblioteki do weryfikacji tokenó JWT
+//import biblioteki do weryfikacji tokenów JWT
 const jwt = require('jsonwebtoken');
 
 //middleware autoryzacyjny, chroni trasy wymagające zalogowania
