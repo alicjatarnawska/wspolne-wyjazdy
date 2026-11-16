@@ -4,6 +4,7 @@ System webowy ułatwiający planowanie wyjazdów grupowych, zarządzanie uczestn
 
 ## Technologie
 * **Backend:** Node.js, Express.js, JWT (`jsonwebtoken`), `bcrypt`
+* **Frontend:** Vue.js, Vite, JavaScript, HTML, CSS
 * **Baza danych:** PostgreSQL
 
 ---
@@ -47,5 +48,27 @@ W katalogu '/backend' uruchom serwer poleceniem:
 npm run dev
 ```
 Poprawnie uruchomiony serwer wyświetli komunikat: `Serwer działa na porcie 5000`.
+
+### 5. Instalacja zależności frontendu
+W katalogu głównym projektu wykonaj następujące polecenia:
+```bash
+cd frontend
+npm install
+```
+
+### 6. Uruchomienie frontendu
+W katalogu '/frontend' uruchom aplikację poleceniem:
+```bash
+npm run dev
+```
+
+Po uruchomieniu zostanie wyświetlony adres aplikacji, zazwyczaj: 
+```bash
+http://localhost:5173/
+```
+Otwórz ten adres w przeglądarce.
+
+**Uwaga**: backend i frontend muszą działać jednocześnie w dwóch osobnych terminalach.
+
 
 ---
