@@ -160,3 +160,95 @@ exports.inviteMember = async (req, res) => {
     res.status(500).json({ error: 'Błąd serwera podczas dodawania uczestnika.' });
   }
 };
+
+
+// zmiana roli uczestnika wyjazdu (tylko dla organizatora)
+// PATCH /api/trips/:tripId/members/:userId
+exports.updateMemberRole = async (req, res) => {
+  // pobranie ID wyjazdu i ID uczestnika z URL, nowej roli z body oraz ID osoby wykonującej z JWT
+  const tripId = Number(req.params.tripId);
+  const targetUserId = Number(req.params.userId);
+  const requesterId = req.user.id;
+  const { role } = req.body;
+
+  if (!Number.isInteger(tripId) || !Number.isInteger(targetUserId)) {
+    return res.status(400).json({
+      error: 'Nieprawidłowy identyfikator wyjazdu lub użytkownika.',
+    });
+  }
+
+  const allowedRoles = ['ORGANIZER', 'PARTICIPANT'];
+  if (typeof role !== 'string' || !allowedRoles.includes(role)) {
+    return res.status(400).json({
+      error: 'Nieprawidłowa rola. Dozwolone wartości to: ORGANIZER lub PARTICIPANT.',
+    });
+  }
+
+  try {
+    // sprawdzenie, czy osoba wysyłająca żądanie jest organizatorem tego wyjazdu
+    const organizerCheck = await pool.query(
+      `SELECT role FROM trip_members
+       WHERE trip_id = $1 AND user_id = $2 AND role = 'ORGANIZER'`,
+      [tripId, requesterId]
+    );
+
+    if (organizerCheck.rows.length === 0) {
+      return res.status(403).json({
+        error: 'Tylko organizator wyjazdu może zmieniać role uczestników.',
+      });
+    }
+
+    // sprawdzenie, czy docelowy użytkownik należy do tego wyjazdu
+    const memberCheck = await pool.query(
+      `SELECT role FROM trip_members
+       WHERE trip_id = $1 AND user_id = $2`,
+      [tripId, targetUserId]
+    );
+
+    if (memberCheck.rows.length === 0) {
+      return res.status(404).json({
+        error: 'Ten użytkownik nie jest uczestnikiem tego wyjazdu.',
+      });
+    }
+
+    // zabezpieczenie przed odebraniem roli ostatniemu organizatorowi wyjazdu
+    if (memberCheck.rows[0].role === 'ORGANIZER' && role === 'PARTICIPANT') {
+      const organizersCount = await pool.query(
+        `SELECT COUNT(*)::int AS count FROM trip_members
+         WHERE trip_id = $1 AND role = 'ORGANIZER'`,
+        [tripId]
+      );
+
+      if (organizersCount.rows[0].count <= 1) {
+        return res.status(409).json({
+          error: 'Wyjazd musi mieć co najmniej jednego organizatora.',
+        });
+      }
+    }
+
+    // aktualizacja roli w tabeli 'trip_members'
+    await pool.query(
+      `UPDATE trip_members
+       SET role = $1
+       WHERE trip_id = $2 AND user_id = $3`,
+      [role, tripId, targetUserId]
+    );
+
+    // pobranie zaktualizowanego obiektu uczestnika
+    const updatedMember = await pool.query(
+      `SELECT u.id, u.email, u.display_name, tm.role
+       FROM trip_members tm
+       JOIN users u ON tm.user_id = u.id
+       WHERE tm.trip_id = $1 AND tm.user_id = $2`,
+      [tripId, targetUserId]
+    );
+
+    res.status(200).json({
+      message: 'Rola uczestnika została zaktualizowana.',
+      member: updatedMember.rows[0],
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Błąd serwera podczas zmiany roli uczestnika.' });
+  }
+};

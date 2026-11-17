@@ -8,6 +8,7 @@ const pool = require('./config/db');
 //import modułów z definicjami tras
 const authRoutes = require('./routes/authRoutes');
 const tripRoutes = require('./routes/tripRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 //główna instancja aplikacji
 const app = express();
@@ -29,6 +30,7 @@ app.get('/api/health', async (req, res) => {
 //podpięcie zaimportowanych modułów z trasami pod odpowiednie prefixy ścieżek URL
 app.use('/api/auth', authRoutes);
 app.use('/api/trips', tripRoutes);
+app.use('/api/users', userRoutes);
 
 //pobranie numeru portu z pliku .env lub ustawienie domyślnego
 const PORT = process.env.PORT || 5000;

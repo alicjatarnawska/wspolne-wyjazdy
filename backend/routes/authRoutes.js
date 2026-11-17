@@ -2,11 +2,11 @@
 const express = require('express');
 //instancja routera do grupowania tras
 const router = express.Router();
-//import kontrolera
+//import kontrolerów
 const authController = require('../controllers/authController');
 
+//trasy publiczne (dostępne bez logowania)
 router.post('/register', authController.register);
 router.post('/login', authController.login);
 
-//eksport skonfigurowanego routera
 module.exports = router;

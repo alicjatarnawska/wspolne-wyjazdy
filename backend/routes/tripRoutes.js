@@ -6,5 +6,6 @@ const authMiddleware = require('../middleware/authMiddleware');
 router.post('/', authMiddleware, tripController.createTrip);
 router.get('/', authMiddleware, tripController.getUserTrips);
 router.post('/:tripId/members', authMiddleware, tripController.inviteMember);
+router.patch('/:tripId/members/:userId', authMiddleware, tripController.updateMemberRole);
 
 module.exports = router;
