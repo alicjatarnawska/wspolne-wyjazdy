@@ -19,8 +19,7 @@ Data testow: 16.11.2026
 - Warunki: jak w TC-01
 - Kroki: tworzy wyjazd jak w TC-01
 - Oczekiwany wynik: w tabeli trip_members jest wiersz z tym uzytkownikiem i rola ORGANIZER
-- Wynik: OK - potwierdzone posrednio: kod 201 (zapis w transakcji) i obecnosc wyjazdu
-  na liscie Oli (TC-05); rola z bazy nie byla sprawdzana bezposrednio
+- Wynik: OK
 
 ### TC-03 Wyjazd bez opisu
 - Warunki: uzytkownik jest zalogowany
