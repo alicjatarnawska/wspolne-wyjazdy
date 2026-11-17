@@ -20,7 +20,22 @@ Przed uruchomieniem projektu upewnij się, że masz zainstalowane:
 
 ### 1. Przygotowanie bazy danych
 1. Utwórz w PostgreSQL nową bazę danych o nazwie "wspolne_wyjazdy".
-2. Otwórz narzędzie **Query Tool** w pgAdmin 4 dla tej bazy i wykonaj skrypty SQL 'database/migrations/001_init.sql' oraz 'database/seeds/001_test_data.sql'
+2. Otwórz narzędzie **Query Tool** w pgAdmin 4 dla tej bazy i wykonaj po kolei:
+   1. wszystkie migracje z folderu `database/migrations`, w kolejności numerów
+      (`001_init.sql`, `002_add_display_name.sql`, ...),
+   2. dane testowe `database/seeds/001_test_data.sql`.
+
+**Masz już bazę z wcześniejszej wersji projektu?** Uruchom tylko nowe migracje,
+których jeszcze nie wykonywałaś. Nie uruchamiaj ponownie `001_init.sql` ani danych testowych.
+
+Konta testowe (hasło do każdego: `haslo123`):
+
+| E-mail | Nick | Rola |
+|---|---|---|
+| ola@example.com | Ola | użytkownik |
+| kasia@example.com | Kasia | użytkownik |
+| alicja@example.com | Alicja | użytkownik |
+| admin@example.com | Admin | administrator |
 
 ### 2. Instalacja zależności
 W katalogu głównym projektu wykonaj następujące polecenia:

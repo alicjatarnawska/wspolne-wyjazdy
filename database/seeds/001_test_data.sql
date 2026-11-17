@@ -1,11 +1,11 @@
 -- 001_test_data.sql
 -- Dane testowe do demo i testów. Hasło każdego konta: haslo123
 
-INSERT INTO users (email, password_hash, is_admin) VALUES
-    ('ola@example.com',    '$2b$10$UNmZB3tIL1uHFh750/FmKuKRrvFvHaMjrfa8FgfLwfYm8bTYwOgwK', FALSE),
-    ('kasia@example.com',  '$2b$10$UNmZB3tIL1uHFh750/FmKuKRrvFvHaMjrfa8FgfLwfYm8bTYwOgwK', FALSE),
-    ('alicja@example.com', '$2b$10$UNmZB3tIL1uHFh750/FmKuKRrvFvHaMjrfa8FgfLwfYm8bTYwOgwK', FALSE),
-    ('admin@example.com',  '$2b$10$UNmZB3tIL1uHFh750/FmKuKRrvFvHaMjrfa8FgfLwfYm8bTYwOgwK', TRUE);
+INSERT INTO users (email, password_hash, display_name, is_admin) VALUES
+    ('ola@example.com',    '$2b$10$UNmZB3tIL1uHFh750/FmKuKRrvFvHaMjrfa8FgfLwfYm8bTYwOgwK', 'Ola',    FALSE),
+    ('kasia@example.com',  '$2b$10$UNmZB3tIL1uHFh750/FmKuKRrvFvHaMjrfa8FgfLwfYm8bTYwOgwK', 'Kasia',  FALSE),
+    ('alicja@example.com', '$2b$10$UNmZB3tIL1uHFh750/FmKuKRrvFvHaMjrfa8FgfLwfYm8bTYwOgwK', 'Alicja', FALSE),
+    ('admin@example.com',  '$2b$10$UNmZB3tIL1uHFh750/FmKuKRrvFvHaMjrfa8FgfLwfYm8bTYwOgwK', 'Admin',  TRUE);
 
 INSERT INTO trips (name, destination, start_date, end_date, description) VALUES
     ('Mazury', 'Giżycko', '2027-05-14', '2027-05-16', 'Długi weekend nad jeziorem');
