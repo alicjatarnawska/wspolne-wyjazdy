@@ -103,7 +103,7 @@ exports.inviteMember = async (req, res) => {
     return res.status(400).json({ error: 'Nieprawidłowy identyfikator wyjazdu.' });
   }
 
-  if (!email) {
+  if (typeof email !== 'string' || !email.trim()) {
     return res.status(400).json({ error: 'Podaj adres e-mail zapraszanego użytkownika.' });
   }
 
@@ -123,7 +123,7 @@ exports.inviteMember = async (req, res) => {
 
     // wyszukanie zapraszanego użytkownika po adresie e-mail
     const userResult = await pool.query(
-      'SELECT id, email FROM users WHERE email = $1',
+      'SELECT id, email, display_name FROM users WHERE email = $1',
       [email.toLowerCase().trim()]
     );
 
@@ -147,6 +147,7 @@ exports.inviteMember = async (req, res) => {
       member: {
         id: invitedUser.id,
         email: invitedUser.email,
+        display_name: invitedUser.display_name,
         role: 'PARTICIPANT',
       },
     });
