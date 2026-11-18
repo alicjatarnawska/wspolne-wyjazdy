@@ -7,7 +7,8 @@ const authMiddleware = require('../middleware/authMiddleware');
 router.use(authMiddleware);
 
 router.get('/profile', userController.getMe);
-router.patch('/profile', userController.updateProfile);
+router.patch('/profile/email', userController.updateEmail);
+router.patch('/profile/display-name', userController.updateDisplayName);
 router.patch('/profile/password', userController.changePassword);
 router.delete('/profile', userController.deleteAccount);
 
