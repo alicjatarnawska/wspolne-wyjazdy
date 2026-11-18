@@ -6,6 +6,7 @@ import { ref } from 'vue'
 import MountainPanel from '../components/MountainPanel.vue'
 
 //dane wpisywane przez użytkownika w formularzu rejestracji
+const displayName = ref('')
 const email = ref('')
 const password = ref('')
 const confirmPassword = ref('')
@@ -22,8 +23,13 @@ async function register() {
   success.value = ''
 
 //sprawdzenie, czy wszystkie pola zostały wypełnione
-  if (!email.value || !password.value || !confirmPassword.value) {
+  if (!displayName.value.trim() || !email.value || !password.value || !confirmPassword.value) {
     error.value = 'Wypełnij wszystkie pola.'
+    return
+  }
+
+  if (displayName.value.trim().length > 50) {
+    error.value = 'Nazwa użytkownika może mieć maksymalnie 50 znaków.'
     return
   }
 
@@ -49,6 +55,7 @@ async function register() {
       },
       body: JSON.stringify({
         //trim() usuwa zbędne spacje na początku i końcu e-maila
+        display_name: displayName.value.trim(),
         email: email.value.trim(),
         password: password.value
       })
@@ -64,6 +71,7 @@ async function register() {
     }
 
     success.value = 'Konto zostało utworzone! Możesz się zalogować.'
+    displayName.value = ''
     password.value = ''
     confirmPassword.value = ''
   } catch (err) {
@@ -85,6 +93,15 @@ async function register() {
           <h2>Zarejestruj się</h2>
 
           <form @submit.prevent="register">
+            <input
+              v-model="displayName"
+              type="text"
+              placeholder="Nazwa użytkownika"
+              autocomplete="username"
+              maxlength="50"
+              required
+            />
+
             <input
               v-model="email"
               type="email"

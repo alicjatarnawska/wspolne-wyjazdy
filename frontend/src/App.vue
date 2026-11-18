@@ -9,6 +9,7 @@ import LoginView from './views/LoginView.vue'
 import RegisterView from './views/RegisterView.vue'
 import TripsView from './views/TripsView.vue'
 import CreateTripView from './views/CreateTripView.vue'
+import ProfileView from './views/ProfileView.vue'
 
 //pobranie aktualnej ścieżki z adresu URL
 // np. /login, /register lub /trips
@@ -36,6 +37,7 @@ onUnmounted(() => {
   <RegisterView v-if="currentPath === '/register'" />
   <CreateTripView v-else-if="currentPath === '/trips/create'" />
   <TripsView v-else-if="currentPath === '/trips'" />
+  <ProfileView v-else-if="currentPath === '/profile'" />
    <!-- dla pozostałych adresów wyświetlana jest strona logowania -->
   <LoginView v-else />
 </template>

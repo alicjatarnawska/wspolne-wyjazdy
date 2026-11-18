@@ -30,10 +30,11 @@ function logout() {
     <span>Moje wyjazdy</span>
   </a>
 
-     <div class="nav-item">
+    <a href="/profile" class="nav-item active">
     <img src="/icons/profile.svg" class="nav-icon" alt="" />
     <span>Profil</span>
-  </div>
+    </a>
+
 </nav>
 
  <!-- dolna część menu z przyciskiem wylogowania -->
