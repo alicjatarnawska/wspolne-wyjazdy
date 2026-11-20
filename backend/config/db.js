@@ -1,6 +1,6 @@
 //import klasy Pool z biblioteki pg do zarządzania pulą połączeń z bazą danych
 //pozwala to wielokrotnie wykorzystywać otwarte połączenia zamiast tworzyć nowe przy każdym zapytaniu
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
 
 // Zwraca kolumny typu DATE (OID 1082) jako czysty tekst "YYYY-MM-DD" bez przesunięcia strefy czasowej
 types.setTypeParser(1082, (val) => val);
