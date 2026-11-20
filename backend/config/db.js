@@ -2,6 +2,9 @@
 //pozwala to wielokrotnie wykorzystywać otwarte połączenia zamiast tworzyć nowe przy każdym zapytaniu
 const { Pool } = require('pg');
 
+// Zwraca kolumny typu DATE (OID 1082) jako czysty tekst "YYYY-MM-DD" bez przesunięcia strefy czasowej
+types.setTypeParser(1082, (val) => val);
+
 //konfiguracja połączenia:
 //jeśli w .env ustawiono pełny adres DATABASE_URL (np. baza w chmurze), łączymy się przez 'connectionString' z włączonym szyfrowaniem SSL
 //w przeciwnym razie (lokalna baza na komputerze) korzystamy z pojedynczych zmiennych DB_*
