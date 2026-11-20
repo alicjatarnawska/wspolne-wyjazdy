@@ -161,6 +161,96 @@ exports.inviteMember = async (req, res) => {
   }
 };
 
+// pomocnicza funkcja sprawdzająca przynależność i rolę użytkownika w wyjeździe
+const getUserTripRole = async (tripId, userId) => {
+  const result = await pool.query(
+    'SELECT role FROM trip_members WHERE trip_id = $1 AND user_id = $2',
+    [tripId, userId]
+  );
+  return result.rows[0]?.role || null;
+};
+
+// pobranie samych szczegółów wyjazdu
+// GET /api/trips/:tripId
+exports.getTripDetails = async (req, res) => {
+  const tripId = Number(req.params.tripId);
+  const userId = req.user.id;
+
+  if (!Number.isInteger(tripId) || tripId <= 0) {
+    return res.status(400).json({ error: 'Nieprawidłowy identyfikator wyjazdu.' });
+  }
+
+  try {
+    const tripResult = await pool.query(
+      `SELECT t.*, tm.role AS my_role
+       FROM trips t
+       LEFT JOIN trip_members tm
+         ON t.id = tm.trip_id AND tm.user_id = $2
+       WHERE t.id = $1`,
+      [tripId, userId]
+    );
+
+    if (tripResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Nie znaleziono wyjazdu.' });
+    }
+
+    const trip = tripResult.rows[0];
+
+    if (!trip.my_role) {
+      return res.status(403).json({ error: 'Nie masz dostępu do tego wyjazdu.' });
+    }
+
+    res.status(200).json({ trip });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Błąd serwera podczas pobierania szczegółów wyjazdu.' });
+  }
+};
+
+// pobranie listy uczestników wyjazdu (zakładka "Uczestnicy")
+// GET /api/trips/:tripId/members
+exports.getTripMembers = async (req, res) => {
+  const tripId = Number(req.params.tripId);
+  const userId = req.user.id;
+
+  if (!Number.isInteger(tripId) || tripId <= 0) {
+    return res.status(400).json({ error: 'Nieprawidłowy identyfikator wyjazdu.' });
+  }
+
+  try {
+    // sprawdzenie, czy zalogowany użytkownik należy do tego wyjazdu
+    const myRole = await getUserTripRole(tripId, userId);
+
+    if (!myRole) {
+      return res.status(403).json({ error: 'Nie masz dostępu do tego wyjazdu.' });
+    }
+
+    const membersResult = await pool.query(
+      `SELECT
+         u.id,
+         u.email,
+         u.display_name,
+         tm.role,
+         tm.joined_at
+       FROM trip_members tm
+       JOIN users u ON tm.user_id = u.id
+       WHERE tm.trip_id = $1
+       ORDER BY
+         CASE WHEN tm.role = 'ORGANIZER' THEN 0 ELSE 1 END,
+         tm.joined_at ASC`,
+      [tripId]
+    );
+
+    res.status(200).json({
+      my_role: myRole,
+      members: membersResult.rows,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Błąd serwera podczas pobierania listy uczestników.' });
+  }
+};
+
 
 // zmiana roli uczestnika wyjazdu (tylko dla organizatora)
 // PATCH /api/trips/:tripId/members/:userId
