@@ -3,17 +3,21 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import Sidebar from '../components/Sidebar.vue'
 
+//aktualnie wybrana zakładka profilu: dane użytkownika lub bezpieczeństwo
 const activeTab = ref('profile')
 
+//dane zalogowanego użytkownika odczytane z pamięci sesji
 const user = ref(
   JSON.parse(sessionStorage.getItem('user') || '{}')
 )
 
+//statystyki wyjazdów wyświetlane na profilu
 const stats = ref({
   total_trips: 0,
   organized_trips: 0,
   participant_trips: 0
 })
+
 
 const upcomingTrips = ref([])
 const loading = ref(true)
@@ -44,10 +48,13 @@ const deleting = ref(false)
 const accountDeleted = ref(false)
 let redirectTimer = null
 
+//blokuje przyciski podczas zapisywania zmian
 const saving = ref(false)
 
+//wspólny adres bazowy endpointów obsługujących użytkowników
 const API_URL = '/api/users'
 
+//przygotowuje nagłówki JSON i token JWT wymagany przez chronione endpointy
 function authHeaders() {
   return {
     'Content-Type': 'application/json',
@@ -55,6 +62,7 @@ function authHeaders() {
   }
 }
 
+//pobiera profil, statystyki i nadchodzące wyjazdy z backendu
 async function fetchProfile() {
   loading.value = true
   error.value = ''
@@ -74,6 +82,7 @@ async function fetchProfile() {
     stats.value = data.stats
     upcomingTrips.value = data.upcoming_trips || []
 
+    //odświeżenie lokalnych danych użytkownika bez ponownego logowania
     sessionStorage.setItem('user', JSON.stringify(data.user))
 
     displayName.value = data.user.display_name || ''
@@ -85,6 +94,7 @@ async function fetchProfile() {
   }
 }
 
+//po otwarciu widoku sprawdza zalogowanie i pobiera aktualne dane
 onMounted(() => {
   const token = sessionStorage.getItem('token')
 
@@ -106,12 +116,14 @@ function formatDate(date) {
   })
 }
 
+//przełącza zakładkę i czyści komunikaty z poprzedniego widoku
 function changeTab(tab) {
   activeTab.value = tab
   error.value = ''
   success.value = ''
 }
 
+//sprawdza nazwę, wysyła żądanie PATCH i aktualizuje dane sesji
 async function updateDisplayName() {
   error.value = ''
   success.value = ''
@@ -290,6 +302,8 @@ async function deleteAccount() {
 
     showDeleteModal.value = false
     deletePassword.value = ''
+
+    //wyświetlenie potwierdzenia przed automatycznym przejściem do logowania
     accountDeleted.value = true
     redirectTimer = setTimeout(goToLogin, 3000)
   } catch (err) {
@@ -299,6 +313,7 @@ async function deleteAccount() {
   }
 }
 
+//zamyka okno usuwania konta
 function closeDeleteModal() {
   if (deleting.value) return
   showDeleteModal.value = false
@@ -306,11 +321,13 @@ function closeDeleteModal() {
   deleteError.value = ''
 }
 
+//przekierowuje do logowania i zatrzymuje oczekujący licznik
 function goToLogin() {
   if (redirectTimer) clearTimeout(redirectTimer)
   window.location.href = '/login'
 }
 
+//czyści licznik przekierowania po opuszczeniu komponentu
 onUnmounted(() => {
   if (redirectTimer) clearTimeout(redirectTimer)
 })
@@ -598,11 +615,11 @@ onUnmounted(() => {
                 <h3>Hasło</h3>
 
                 <p
-  v-if="passwordSuccess"
-  class="profile-inline-message profile-inline-success"
->
-  {{ passwordSuccess }}
-</p>
+                  v-if="passwordSuccess"
+                  class="profile-inline-message profile-inline-success"
+                >
+                  {{ passwordSuccess }}
+                </p>
 
                 <button
                   v-if="!editingPassword"
@@ -648,12 +665,12 @@ onUnmounted(() => {
                   </div>
 
                   <p
-  v-if="passwordError"
-  class="profile-inline-message profile-inline-error"
-  role="alert"
->
-  {{ passwordError }}
-</p>
+                    v-if="passwordError"
+                    class="profile-inline-message profile-inline-error"
+                    role="alert"
+                  >
+                    {{ passwordError }}
+                  </p>
 
                   <div class="profile-form-actions">
                     <button
@@ -782,140 +799,3 @@ onUnmounted(() => {
 
   </div>
 </template>
-
-<style scoped>
-.profile-deleted-modal {
-  text-align: center;
-}
-.profile-deleted-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 60px;
-  height: 60px;
-  margin: 0 auto 18px;
-  border-radius: 50%;
-  background: #e8f7ee;
-  color: #248a4b;
-  font-size: 34px;
-}
-.profile-deleted-modal .profile-save-btn {
-  margin-top: 20px;
-}
-
-.profile-delete-dialog {
-  position: relative;
-  width: min(100% - 32px, 480px);
-  box-sizing: border-box;
-  padding: 36px 32px 30px;
-  border-radius: 22px;
-  background: #fff;
-  box-shadow: 0 24px 70px rgba(25, 33, 49, .18);
-  text-align: center;
-}
-.profile-dialog-close {
-  position: absolute;
-  top: 14px;
-  right: 17px;
-  width: 34px;
-  height: 34px;
-  border: 0;
-  border-radius: 9px;
-  background: transparent;
-  color: #7b8493;
-  font-size: 26px;
-  cursor: pointer;
-}
-.profile-dialog-close:hover { background: #f2f3f5; }
-.profile-warning-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 68px;
-  height: 68px;
-  margin: 0 auto 20px;
-  border-radius: 20px;
-  background: #fff0ed;
-  color: #d84b3c;
-}
-.profile-delete-dialog h2 {
-  margin: 0 0 12px;
-  color: #222b3a;
-  font-size: 22px;
-  line-height: 1.3;
-  font-weight: 700;
-}
-.profile-delete-description {
-  margin: 0 0 22px;
-  color: #687385;
-  font-size: 14px;
-  line-height: 1.65;
-}
-.profile-delete-notice {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 14px;
-  border: 1px solid #f7ded8;
-  border-radius: 12px;
-  background: #fff8f6;
-  color: #8c5146;
-  font-size: 13px;
-  line-height: 1.5;
-  text-align: left;
-}
-.profile-delete-notice svg { flex-shrink: 0; margin-top: 1px; }
-.profile-delete-form { margin-top: 22px; text-align: left; }
-.profile-delete-form label {
-  display: block;
-  margin-bottom: 9px;
-  color: #374151;
-  font-size: 13px;
-  font-weight: 600;
-}
-.profile-delete-form .profile-input {
-  width: 100%;
-  box-sizing: border-box;
-  min-height: 46px;
-  border-radius: 10px;
-}
-.profile-delete-error {
-  margin: 12px 0 0;
-  color: #bd332b;
-  font-size: 13px;
-  line-height: 1.5;
-}
-.profile-delete-actions {
-  display: flex;
-  gap: 12px;
-  margin-top: 24px;
-}
-.profile-delete-actions button {
-  flex: 1;
-  min-height: 46px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background .15s, opacity .15s;
-}
-.profile-keep-account-btn {
-  border: 1px solid #d9dee6;
-  background: white;
-  color: #344054;
-}
-.profile-keep-account-btn:hover { background: #f5f6f8; }
-.profile-delete-actions .profile-delete-confirm-btn {
-  border: 1px solid #d94841;
-  background: #d94841;
-  color: #fff;
-}
-.profile-delete-actions .profile-delete-confirm-btn:hover:not(:disabled) { background: #bc362f; }
-.profile-delete-actions button:disabled { cursor: not-allowed; opacity: .55; }
-@media (max-width: 520px) {
-  .profile-delete-dialog { padding: 32px 20px 24px; }
-  .profile-delete-dialog h2 { font-size: 20px; }
-  .profile-delete-actions { flex-direction: column-reverse; }
-}
-</style>

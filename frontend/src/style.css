@@ -1948,3 +1948,45 @@ font-size: 20px;
 flex-direction: column-reverse;
 }
 }
+
+.sidebar-nav .nav-item,
+.sidebar-footer .logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 0;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: #16182c;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.sidebar-nav .nav-item:hover,
+.sidebar-footer .logout-btn:hover {
+  color: #365e85;
+  background: #edf3f8;
+}
+
+.sidebar-nav .nav-item.active {
+  color: #365e85;
+  background: #edf3f8;
+  font-weight: 500;
+}
+
+.sidebar-nav .nav-item svg.nav-icon,
+.sidebar-footer .logout-btn svg.nav-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: inherit;
+  filter: none;
+}
