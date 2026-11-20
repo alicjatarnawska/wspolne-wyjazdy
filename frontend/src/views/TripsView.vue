@@ -22,8 +22,7 @@ const colors = ['#b9dce7', '#d8e6f1', '#e5d6c2']
 
 //funkcja zamieniająca datę na czytelny format po polsku
 function formatDate(date) {
-  //jeśli nie ma daty, zwracany jest pusty tekst
-  if (!date) return ''
+  if (!date) return 'Nie podano'
 
   const [year, month, day] = String(date).slice(0, 10).split('-')
 
@@ -84,6 +83,11 @@ function createTrip() {
   window.location.href = '/trips/create'
 }
 
+//funkcja przenosząca użytkownika do szczegółów wybranego wyjazdu
+function openTrip(tripId) {
+  window.location.href = `/trips/${tripId}`
+}
+
 //po zamontowaniu komponentu automatycznie pobierane są wyjazdy
 onMounted(loadTrips)
 </script>
@@ -128,9 +132,14 @@ onMounted(loadTrips)
     <!-- index oznacza pozycję wyjazdu na liście -->
     <!-- :key pomaga Vue rozpoznawać poszczególne karty -->
     <div
-    v-for="(trip, index) in trips"
-    :key="trip.id"
-    class="trips-card"
+      v-for="(trip, index) in trips"
+      :key="trip.id"
+      class="trips-card"
+      role="link"
+      tabindex="0"
+      @click="openTrip(trip.id)"
+      @keydown.enter="openTrip(trip.id)"
+      @keydown.space.prevent="openTrip(trip.id)"
     >
   
 
