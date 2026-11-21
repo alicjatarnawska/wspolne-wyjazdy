@@ -217,16 +217,7 @@ async function saveItem() {
     title: form.value.title.trim(),
     description: form.value.description.trim() || null
   }
-  if (!payload.title || !payload.date) {
-    error.value = 'Uzupełnij tytuł i datę aktywności.'
-    return
-  }
-  const min = dateOnly(props.startDate)
-  const max = dateOnly(props.endDate)
-  if ((min && payload.date < min) || (max && payload.date > max)) {
-    error.value = 'Data aktywności musi mieścić się w terminie wyjazdu.'
-    return
-  }
+
   saving.value = true
   try {
     const isEdit = editingId.value !== null
@@ -377,11 +368,11 @@ onMounted(loadPlan)
     <div v-if="showForm" class="modal-backdrop" @click.self="closeForm">
       <section class="modal" role="dialog" aria-modal="true" aria-labelledby="schedule-modal-title">
         <div class="modal-heading"><h2 id="schedule-modal-title">{{ editingId !== null ? 'Edytuj aktywność' : 'Dodaj aktywność' }}</h2><button type="button" class="close-button" :disabled="saving" @click="closeForm">×</button></div>
-        <form @submit.prevent="saveItem">
+        <form novalidate @submit.prevent="saveItem">
           <label for="activity-title">Tytuł aktywności</label>
-          <input id="activity-title" v-model="form.title" type="text" maxlength="150" required placeholder="Np. spacer po centrum" />
+          <input id="activity-title" v-model="form.title" type="text" placeholder="Np. spacer po centrum" />
           <div class="form-grid">
-            <div><label for="activity-date">Data</label><input id="activity-date" v-model="form.date" type="date" :min="dateOnly(startDate) || undefined" :max="dateOnly(endDate) || undefined" required /></div>
+            <div><label for="activity-date">Data</label><input id="activity-date" v-model="form.date" type="date" /></div>
             <div><label for="activity-time">Godzina (opcjonalnie)</label><input id="activity-time" v-model="form.time" type="time" /></div>
           </div>
           <label for="activity-description">Opis (opcjonalnie)</label>
