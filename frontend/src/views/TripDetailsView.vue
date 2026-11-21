@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import Sidebar from '../components/Sidebar.vue' 
+import Sidebar from '../components/Sidebar.vue'
+import TripSchedule from '../components/TripSchedule.vue' 
 
 //pobranie identyfikatora wyjazdu z adresu strony
 const tripId = window.location.pathname.match(/^\/trips\/(\d+)\/?$/)?.[1]
@@ -262,6 +263,14 @@ onMounted(loadTrip)
             <article class="trip-summary-item"><div class="trip-summary-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M17 5a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 5v1"/></svg></div><span>Uczestnicy</span><strong>{{ members.length }}</strong></article>
           </div>
           <article class="trip-description-card"><div class="trip-description-heading"><h2>Opis wyjazdu</h2></div><p class="trip-description">{{ trip.description || 'Nie dodano jeszcze opisu wyjazdu.' }}</p></article>
+        </section>
+
+        <section v-else-if="activeTab === 'schedule'" class="trip-schedule">
+          <TripSchedule
+            :trip-id="tripId"
+            :start-date="trip.start_date"
+            :end-date="trip.end_date"
+          />
         </section>
 
         <section v-else-if="activeTab === 'members'" class="trip-panel">
