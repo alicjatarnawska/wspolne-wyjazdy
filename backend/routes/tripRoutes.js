@@ -3,6 +3,7 @@ const router = express.Router();
 const tripController = require('../controllers/tripController');
 const authMiddleware = require('../middleware/authMiddleware');
 const planRoutes = require('./planRoutes');
+const taskRoutes = require('./taskRoutes');
 
 //strona główna wyjazdów
 router.post('/', authMiddleware, tripController.createTrip);
@@ -17,5 +18,7 @@ router.post('/:tripId/members', authMiddleware, tripController.inviteMember);
 router.patch('/:tripId/members/:userId', authMiddleware, tripController.updateMemberRole);
 //zakładka "Harmonogram"
 router.use('/:tripId/plan', authMiddleware, planRoutes);
+//zakładka "Zadania"
+router.use('/:tripId/tasks', authMiddleware, taskRoutes);
 
 module.exports = router;

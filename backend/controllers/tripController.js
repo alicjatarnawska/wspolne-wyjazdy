@@ -1,7 +1,7 @@
 const pool = require('../config/db');
 const fs = require('fs/promises');
 
-// Wykrywanie potencjalnie niebezpiecznych znaczników HTML/JS (ochrona przed XSS)
+// wykrywanie potencjalnie niebezpiecznych znaczników HTML/JS (ochrona przed XSS)
 const containsScriptOrHtml = (text) =>
   /<[^>]*>/.test(text) ||
   /<\s*\/?\s*script/i.test(text) ||
