@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import Sidebar from '../components/Sidebar.vue'
 import TripSchedule from '../components/TripSchedule.vue' 
+import TripTasks from '../components/TripTasks.vue'
 
 //pobranie identyfikatora wyjazdu z adresu strony
 const tripId = window.location.pathname.match(/^\/trips\/(\d+)\/?$/)?.[1]
@@ -281,6 +282,12 @@ onMounted(loadTrip)
           <div v-else class="trip-member-list"><div v-for="member in members" :key="member.id" class="trip-member"><div class="trip-member-avatar">{{ (member.display_name || member.email || '?').charAt(0).toUpperCase() }}</div><div class="trip-member-info"><strong>{{ member.display_name || member.email }}</strong><span>{{ member.email }}</span></div><span class="trip-member-role" :class="member.role === 'ORGANIZER' ? 'organizer' : 'participant'">{{ member.role === 'ORGANIZER' ? 'Organizator' : 'Uczestnik' }}</span><button v-if="isOrganizer" type="button" class="trip-role-button" @click="openMemberEditor(member)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L9 17l-4 1 1-4Z"/></svg>Edytuj</button></div></div>
         </section>
 
+        <section v-else-if="activeTab === 'tasks'" class="trip-tasks">
+          <TripTasks
+            :trip-id="tripId"
+            :members="members"
+          />
+        </section>
        
       </template>
 
