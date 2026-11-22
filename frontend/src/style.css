@@ -4618,3 +4618,307 @@ button:disabled {
   }
 }
 
+.trip-management-menu {
+  margin: 18px 0 0;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.trip-management-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  list-style: none;
+  color: #718398;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+
+.trip-management-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.trip-management-toggle:hover {
+  color: #365e85;
+}
+
+.trip-management-toggle span {
+  font-size: 17px;
+  transition: transform 0.15s ease;
+}
+
+.trip-management-menu[open] .trip-management-toggle span {
+  transform: rotate(180deg);
+}
+
+.trip-management-toggle:focus-visible {
+  outline: 2px solid #365e85;
+  outline-offset: 4px;
+  border-radius: 3px;
+}
+
+.trip-management-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 7px 0 0;
+}
+
+.trip-manage-button {
+  border: 1px solid #cbd8e5;
+  border-radius: 8px;
+  padding: 10px 15px;
+  background: #fff;
+  color: #365e85;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.trip-manage-button:hover {
+  background: #edf3f8;
+}
+
+.trip-manage-button.danger {
+  color: #b43d3d;
+  border-color: #e5bcbc;
+}
+
+.trip-manage-button.danger:hover {
+  background: #fff2f2;
+}
+
+.trip-management-modal {
+  width: min(94vw, 540px);
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 26px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 18px 55px rgba(20, 40, 60, 0.18);
+}
+
+.trip-management-modal .trip-modal-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.trip-management-modal h2 {
+  margin: 0;
+  font-size: 22px;
+  color: #253e55;
+}
+
+.trip-management-modal .trip-modal-close {
+  border: 0;
+  background: transparent;
+  font-size: 27px;
+  cursor: pointer;
+  color: #60768a;
+}
+
+.trip-management-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.trip-management-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #36516b;
+}
+
+.trip-management-form input,
+.trip-management-form textarea {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid #d3deea;
+  border-radius: 8px;
+  background: #fff;
+  color: #253e55;
+  font: inherit;
+  font-size: 14px;
+}
+
+.trip-management-dates {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.trip-management-confirm p {
+  line-height: 1.6;
+  color: #40586d;
+}
+
+.trip-management-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.trip-management-footer button {
+  padding: 11px 16px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.trip-management-footer .trip-cancel-btn {
+  background: #fff;
+  color: #365e85;
+  border: 1px solid #cbd8e5;
+}
+
+.trip-management-footer .trip-save-btn {
+  background: #365e85;
+  color: #fff;
+  border: 1px solid #365e85;
+}
+
+.trip-management-footer .trip-delete-confirm-btn {
+  background: #b43d3d;
+  color: #fff;
+  border: 1px solid #b43d3d;
+}
+
+.trip-management-footer button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.trip-overview-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  position: relative;
+}
+
+.trip-overview-heading .trip-management-menu {
+  margin: 0;
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.trip-overview-heading .trip-management-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid #dce5ed;
+  border-radius: 10px;
+  background: #fff;
+  color: #718398;
+  cursor: pointer;
+  list-style: none;
+}
+
+.trip-overview-heading .trip-management-toggle:hover {
+  background: #f0f5f9;
+  color: #365e85;
+}
+
+.trip-overview-heading .trip-management-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.trip-overview-heading .trip-management-actions {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+  min-width: 195px;
+  margin: 0;
+  padding: 8px;
+  border: 1px solid #e1e8ef;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(25, 48, 73, 0.13);
+}
+
+.trip-overview-heading .trip-manage-button {
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  padding: 10px 12px;
+}
+
+.trip-overview-heading .trip-manage-button:hover {
+  background: #edf3f8;
+}
+
+.trip-overview-heading .trip-manage-button.danger {
+  color: #b43d3d;
+}
+
+.trip-overview-heading .trip-manage-button.danger:hover {
+  background: #fff2f2;
+}
+
+@media (max-width: 600px) {
+  .trip-management-dates {
+    grid-template-columns: 1fr;
+  }
+}
+
+.trip-feedback-area {
+  width: 100%;
+  margin: 0 0 20px;
+}
+
+.trip-feedback-area .trip-feedback {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0 0 10px;
+  padding: 12px 15px;
+  border: 0;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+  box-shadow: none;
+}
+
+.trip-feedback-area .trip-feedback.success {
+  background: #eaf6ee;
+  color: #267343;
+}
+
+.trip-feedback-area .trip-feedback.error {
+  background: #fcecec;
+  color: #a73535;
+}
+
+.trips-content .trips-role.trips-role-organizer {
+  background-color: #e4f3e9;
+  color: #287a4c;
+}
+
+.trips-content .trips-role.trips-role-participant {
+  background-color: #dfeaf6;
+  color: #365e85;
+}
