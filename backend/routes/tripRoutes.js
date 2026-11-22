@@ -16,6 +16,7 @@ router.delete('/:tripId', authMiddleware, tripController.deleteTrip);
 router.get('/:tripId/members', authMiddleware, tripController.getTripMembers);
 router.post('/:tripId/members', authMiddleware, tripController.inviteMember);
 router.patch('/:tripId/members/:userId', authMiddleware, tripController.updateMemberRole);
+router.delete('/:tripId/members/:userId', authMiddleware, tripController.removeMember);
 //zakładka "Harmonogram"
 router.use('/:tripId/plan', authMiddleware, planRoutes);
 //zakładka "Zadania"

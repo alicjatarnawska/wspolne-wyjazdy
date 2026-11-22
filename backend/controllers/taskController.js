@@ -11,9 +11,14 @@ const validateTaskData = ({ name, assigned_user_id, due_date, status }) => {
     return { error: 'Nazwa zadania może mieć maksymalnie 150 znaków.' };
   }
 
-  const parsedAssignedUserId = Number(assigned_user_id);
-  if (!Number.isInteger(parsedAssignedUserId) || parsedAssignedUserId <= 0) {
-    return { error: 'Wybierz poprawną osobę odpowiedzialną za zadanie.' };
+  // assigned_user_id - opcjonalny, ale jeśli podany, musi być liczbą całkowitą większą od 0
+  let normalizedAssignedUserId = null;
+  if (assigned_user_id !== undefined && assigned_user_id !== null && assigned_user_id !== '') {
+    const parsedId = Number(assigned_user_id);
+    if (!Number.isInteger(parsedId) || parsedId <= 0) {
+      return { error: 'Wybierz poprawną osobę odpowiedzialną za zadanie.' };
+    }
+    normalizedAssignedUserId = parsedId;
   }
 
   // termin wykonania - opcjonalny
@@ -29,7 +34,7 @@ const validateTaskData = ({ name, assigned_user_id, due_date, status }) => {
   return {
     data: {
       name: trimmedName,
-      assigned_user_id: parsedAssignedUserId,
+      assigned_user_id: normalizedAssignedUserId,
       due_date: normalizedDueDate,
       status: normalizedStatus,
     },
@@ -93,7 +98,7 @@ exports.getTripTasks = async (req, res) => {
          t.due_date,
          t.status
        FROM tasks t
-       JOIN users u ON t.assigned_user_id = u.id
+       LEFT JOIN users u ON t.assigned_user_id = u.id
        WHERE t.trip_id = $1
        ORDER BY
          CASE WHEN t.status = 'TODO' THEN 0 ELSE 1 END ASC,
@@ -137,12 +142,15 @@ exports.addTask = async (req, res) => {
       return res.status(403).json({ error: 'Nie masz dostępu do tego wyjazdu.' });
     }
 
-    // sprawdzenie, czy osoba przypisywana do zadania jest uczestnikiem wyjazdu
-    const assignee = await getTripMemberInfo(tripId, data.assigned_user_id);
-    if (!assignee) {
-      return res.status(400).json({
-        error: 'Wybrany użytkownik nie jest uczestnikiem tego wyjazdu.',
-      });
+    // sprawdzenie, czy osoba przypisywana do zadania jest uczestnikiem wyjazdu (jeśli assigned_user_id nie jest null)
+    let assignee = null;
+    if (data.assigned_user_id !== null) {
+      assignee = await getTripMemberInfo(tripId, data.assigned_user_id);
+      if (!assignee) {
+        return res.status(400).json({
+          error: 'Wybrany użytkownik nie jest uczestnikiem tego wyjazdu.',
+        });
+      }
     }
 
     const insertResult = await pool.query(
@@ -156,8 +164,8 @@ exports.addTask = async (req, res) => {
       message: 'Zadanie zostało dodane.',
       task: {
         ...insertResult.rows[0],
-        assigned_user_name: assignee.display_name,
-        assigned_user_email: assignee.email,
+        assigned_user_name: assignee?.display_name || null,
+        assigned_user_email: assignee?.email || null,
       },
     });
   } catch (err) {
@@ -218,11 +226,14 @@ exports.updateTask = async (req, res) => {
       return res.status(400).json({ error });
     }
 
-    const assignee = await getTripMemberInfo(tripId, data.assigned_user_id);
-    if (!assignee) {
-      return res.status(400).json({
-        error: 'Wybrany użytkownik nie jest uczestnikiem tego wyjazdu.',
-      });
+    let assignee = null;
+    if (data.assigned_user_id !== null) {
+      assignee = await getTripMemberInfo(tripId, data.assigned_user_id);
+      if (!assignee) {
+        return res.status(400).json({
+          error: 'Wybrany użytkownik nie jest uczestnikiem tego wyjazdu.',
+        });
+      }
     }
 
     const updateResult = await pool.query(
@@ -237,8 +248,8 @@ exports.updateTask = async (req, res) => {
       message: 'Zadanie zostało zaktualizowane.',
       task: {
         ...updateResult.rows[0],
-        assigned_user_name: assignee.display_name,
-        assigned_user_email: assignee.email,
+        assigned_user_name: assignee?.display_name || null,
+        assigned_user_email: assignee?.email || null,
       },
     });
   } catch (err) {

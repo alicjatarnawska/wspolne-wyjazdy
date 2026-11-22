@@ -211,6 +211,109 @@ exports.updateTrip = async (req, res) => {
   }
 };
 
+// usunięcie uczestnika przez organizatora lub samodzielne opuszczenie wyjazdu
+// DELETE /api/trips/:tripId/members/:userId (oraz /members/me dla opuszczenia wyjazdu przez siebie)
+exports.removeMember = async (req, res) => {
+  const tripId = Number(req.params.tripId);
+  const requesterId = req.user.id;
+  const targetUserId =
+    req.params.userId === 'me' ? requesterId : Number(req.params.userId);
+
+  if (!Number.isInteger(tripId) || tripId <= 0 || !Number.isInteger(targetUserId) || targetUserId <= 0) {
+    return res.status(400).json({
+      error: 'Nieprawidłowy identyfikator wyjazdu lub użytkownika.',
+    });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    //sprawdzenie, czy wyjazd w ogóle istnieje
+    const tripCheck = await client.query('SELECT id FROM trips WHERE id = $1', [tripId]);
+    if (tripCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Nie znaleziono wyjazdu.' });
+    }
+
+    // pobranie wszystkich członków wyjazdu w jednym zapytaniu, aby sprawdzić role obu użytkowników oraz liczbę organizatorów
+    const membersResult = await client.query(
+      'SELECT user_id, role FROM trip_members WHERE trip_id = $1',
+      [tripId]
+    );
+    const members = membersResult.rows;
+
+    const requesterMember = members.find((m) => m.user_id === requesterId);
+    if (!requesterMember) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ error: 'Nie masz dostępu do tego wyjazdu.' });
+    }
+
+    const targetMember = members.find((m) => m.user_id === targetUserId);
+    if (!targetMember) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Ten użytkownik nie jest uczestnikiem tego wyjazdu.' });
+    }
+
+    const isSelfLeave = requesterId === targetUserId;
+
+    //jeśli ktoś próbuje usunąć inną osobę, musi być organizatorem
+    if (!isSelfLeave && requesterMember.role !== 'ORGANIZER') {
+      await client.query('ROLLBACK');
+      return res.status(403).json({
+        error: 'Tylko organizator wyjazdu może usuwać innych uczestników.',
+      });
+    }
+
+    //wyjazd nie może zostać zupełnie pusty bez żadnego uczestnika
+    if (members.length === 1) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({
+        error: 'Jesteś jedynym uczestnikiem tego wyjazdu. Aby go zakończyć, usuń cały wyjazd.',
+      });
+    }
+
+    // zabezpieczenie przed pozostawieniem wyjazdu bez żadnego organizatora
+    const organizers = members.filter((m) => m.role === 'ORGANIZER');
+    if (targetMember.role === 'ORGANIZER' && organizers.length <= 1) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({
+        error: 'Nie możesz opuścić wyjazdu jako jedyny organizator. Najpierw przekaż rolę organizatora innemu uczestnikowi.',
+      });
+    }
+
+   // odpięcie zadań odchodzącego uczestnika (stają się nieprzypisane)
+    await client.query(
+      `UPDATE tasks
+       SET assigned_user_id = NULL
+       WHERE trip_id = $1 AND assigned_user_id = $2`,
+      [tripId, targetUserId]
+    );
+
+    // usunięcie rekordu z tabeli 'trip_members'
+    await client.query(
+      'DELETE FROM trip_members WHERE trip_id = $1 AND user_id = $2',
+      [tripId, targetUserId]
+    );
+
+    await client.query('COMMIT');
+
+    res.status(200).json({
+      message: isSelfLeave
+        ? 'Opuszczono wyjazd.'
+        : 'Uczestnik został usunięty z wyjazdu.',
+      removedUserId: targetUserId,
+      leftTrip: isSelfLeave,
+    });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error(err);
+    res.status(500).json({ error: 'Błąd serwera podczas usuwania uczestnika z wyjazdu.' });
+  } finally {
+    client.release();
+  }
+};
+
 // usunięcie wyjazdu wraz ze wszystkimi powiązanymi danymi (tylko dla organizatora)
 // DELETE /api/trips/:tripId
 exports.deleteTrip = async (req, res) => {
