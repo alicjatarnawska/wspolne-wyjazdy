@@ -9,6 +9,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 // import widoków poszczególnych stron aplikacji
 import LoginView from './views/LoginView.vue'
 import RegisterView from './views/RegisterView.vue'
+import HomeView from './views/HomeView.vue'
 import TripsView from './views/TripsView.vue'
 import CreateTripView from './views/CreateTripView.vue'
 import ProfileView from './views/ProfileView.vue'
@@ -47,9 +48,16 @@ onUnmounted(() => {
 })
 </script>
 
+
 <template>
   <!-- rejestracja -->
   <RegisterView v-if="currentPath === '/register'" />
+
+  <!-- logowanie -->
+  <LoginView v-else-if="currentPath === '/login'" />
+
+  <!-- strona główna -->
+  <HomeView v-else-if="currentPath === '/'" />
 
   <!-- tworzenie nowego wyjazdu -->
   <CreateTripView v-else-if="currentPath === '/trips/create'" />
@@ -67,6 +75,7 @@ onUnmounted(() => {
   <!-- profil użytkownika -->
   <ProfileView v-else-if="currentPath === '/profile'" />
 
-  <!-- pozostałe adresy -->
+  <!-- nieznane adresy -->
   <LoginView v-else />
 </template>
+
