@@ -2,7 +2,7 @@
 
 Opis tego, co testujemy i jakiego wyniku sie spodziewamy.
 Po przetestowaniu wpisuje wynik: OK albo BLAD (+ krotki opis bledu).
-Numeracja jest kontynuacja pliku przypadki-testowe.md (TC-01 - TC-13).
+Numeracja jest kontynuacja pliku przypadki-testowe-etap-1.md (TC-01 - TC-13).
 Testy automatyczne API: tests/members.test.js i tests/auth.test.js (uruchomienie: npm test w folderze tests).
 
 

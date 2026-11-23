@@ -8,66 +8,66 @@ Numeracja jest kontynuacja pliku przypadki-testowe-etap-2.md (TC-14 - TC-36).
 ## Opis wyjazdu - walidacja i bezpieczenstwo (WF-03)
 
 Opis: opcjonalny, maksymalnie 500 znakow, bez kodu HTML i skryptow.
-Data testow: -
+Data testow: 23.11.2026
 
 ### TC-37 Opis ze skryptem
 - Warunki: uzytkownik jest zalogowany
 - Kroki: tworzy wyjazd z opisem <script>alert('test')</script>
 - Oczekiwany wynik: wyjazd sie nie tworzy, komunikat ze opis nie moze zawierac kodu (kod 400)
-- Wynik: -
+- Wynik: OK
 
 ### TC-38 Znaki < i > w zwyklym tekscie
 - Warunki: uzytkownik jest zalogowany
 - Kroki: tworzy wyjazd z opisem "budzet < 200 zl, dzieci > 5 lat"
 - Oczekiwany wynik: wyjazd sie tworzy (kod 201) - to zwykly tekst, nie kod HTML
-- Wynik: -
+- Wynik: BLAD - zwykly tekst z < i > odrzucany jako HTML (zobacz B-03)
 
 ### TC-39 Opis o dlugosci dokladnie 500 znakow
 - Warunki: uzytkownik jest zalogowany
 - Kroki: tworzy wyjazd z opisem dlugosci 500 znakow
 - Oczekiwany wynik: wyjazd sie tworzy (kod 201)
-- Wynik: -
+- Wynik: OK
 
 ### TC-40 Za dlugi opis
 - Warunki: uzytkownik jest zalogowany
 - Kroki: tworzy wyjazd z opisem dlugosci 501 znakow
 - Oczekiwany wynik: wyjazd sie nie tworzy, komunikat o zbyt dlugim opisie (kod 400)
-- Wynik: -
+- Wynik: OK
 
 ### TC-41 Opis nie jest tekstem
 - Warunki: uzytkownik jest zalogowany
 - Kroki: wysyla do API opis jako liczbe (description: 123)
 - Oczekiwany wynik: wyjazd sie nie tworzy, komunikat ze opis musi byc tekstem (kod 400)
-- Wynik: -
+- Wynik: OK
 
 
 ## Szczegoly wyjazdu (WF-05)
 
-Data testow: -
+Data testow: 23.11.2026
 
 ### TC-42 Uczestnik widzi szczegoly wyjazdu
 - Warunki: Ola utworzyla wyjazd
 - Kroki: Ola otwiera szczegoly wyjazdu
 - Oczekiwany wynik: dane wyjazdu i rola Oli ORGANIZER (kod 200)
-- Wynik: -
+- Wynik: OK
 
 ### TC-43 Osoba spoza wyjazdu nie widzi szczegolow
 - Warunki: Ola utworzyla wyjazd, Kasia nie jest uczestnikiem
 - Kroki: Kasia otwiera adres wyjazdu Oli
 - Oczekiwany wynik: brak dostepu (kod 403) - sprawdza tez TC-12 z etapu 1
-- Wynik: -
+- Wynik: OK
 
 ### TC-44 Wyjazd nie istnieje
 - Warunki: uzytkownik jest zalogowany
 - Kroki: otwiera wyjazd o numerze, ktorego nie ma (np. 999999)
 - Oczekiwany wynik: komunikat ze nie znaleziono wyjazdu (kod 404)
-- Wynik: -
+- Wynik: OK
 
 ### TC-45 Nieprawidlowy numer wyjazdu
 - Warunki: uzytkownik jest zalogowany
 - Kroki: otwiera adres /api/trips/abc
 - Oczekiwany wynik: komunikat o nieprawidlowym identyfikatorze (kod 400)
-- Wynik: -
+- Wynik: OK
 
 
 ## Lista uczestnikow (WF-04, WF-05)
@@ -248,13 +248,18 @@ Data testow: -
 
 ## Znalezione bledy
 
-Brak.
+### B-03 Zwykly tekst z < i > odrzucany jako kod HTML
+- Wykryty przez: TC-38
+- Opis: filtr /<[^>]*>/ uznaje za HTML kazdy fragment miedzy < a >, wiec opis
+  "budzet < 200 zl, dzieci > 5 lat" dostaje 400 zamiast 201.
+- Propozycja: /<\/?[a-z!][^>]*>/i - tylko prawdziwe znaczniki.
+- Status: zgloszony
 
 
 ## Uwagi dla backendu
 
 - Opis wyjazdu: max 500 znakow, musi byc tekstem, bez HTML i skryptow (TC-37 - TC-41).
-- Filtr HTML odrzuca kazdy tekst z fragmentem miedzy < a > - sprawdza to TC-38.
+- Filtr HTML odrzuca tez zwykly tekst z < i > - blad B-03 (TC-38).
 - Usuwanie konta nie sprawdza dlugow - do dodania, gdy beda wydatki
   (dlug w obie strony: uzytkownik jest komus winny albo ktos jest winny jemu).
 - TC-43 i TC-46 sprawdzaja tez TC-12 (etap 1) i TC-25 (etap 2), ktore wczesniej nie mogly byc przetestowane.

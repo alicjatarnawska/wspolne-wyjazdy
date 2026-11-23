@@ -185,7 +185,6 @@ describe('Tworzenie wyjazdu (WF-03)', () => {
     expect(res.body.error).toBeDefined();
   });
 });
-
 describe('Uprawnienia (WF-05)', () => {
   test('TC-11 cudzy wyjazd nie jest widoczny na liscie', async () => {
     // Ola tworzy wyjazd
@@ -209,11 +208,12 @@ describe('Uprawnienia (WF-05)', () => {
     const found = res.body.trips.some(t => t.id === tripId);
     expect(found).toBe(false);
   });
+});
 
-  
-  //---------------------------------------------ETAP 3 --------------------------------------------------------------//
 
-  describe('Opis wyjazdu (WF-03)', () => {
+//---------------------------------------------ETAP 3 --------------------------------------------------------------//
+
+describe('Opis wyjazdu (WF-03)', () => {
   // dane wyjazdu z wybranym opisem
   function tripWithDescription(description) {
     return {
@@ -321,5 +321,4 @@ describe('Szczegoly wyjazdu (WF-05)', () => {
 
     expect(res.status).toBe(400);
   });
-});
 });

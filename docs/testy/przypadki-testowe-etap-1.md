@@ -93,7 +93,7 @@ Limit dlugosci: nazwa i miejsce docelowe maksymalnie 100 znakow.
 - Warunki: jak w TC-11
 - Kroki: Kasia wchodzi na adres wyjazdu Oli
 - Oczekiwany wynik: brak dostepu (kod 403)
-- Wynik: - (nie do przetestowania: backend nie ma jeszcze adresu do otwierania pojedynczego wyjazdu)
+- Wynik: OK (sprawdzone w TC-43, etap 3, 23.11.2026)
 
 
 ## Znalezione bledy
