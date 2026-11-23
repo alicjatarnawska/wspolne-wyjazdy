@@ -185,13 +185,13 @@ Data testow: 23.11.2026
 - Warunki: uczestnik wyjazdu
 - Kroki: dodaje aktywnosc z tytulem <img src=x onerror="alert(1)">
 - Oczekiwany wynik: aktywnosc nie zostaje dodana (kod 400) - tak jak przy nazwie i opisie wyjazdu
-- Wynik: BLAD - aktywnosc zostala dodana (kod 201), zobacz B-04
+- Wynik: OK (po poprawce B-04, test ponowny 23.11.2026)
 
 ### TC-99 Bardzo dlugi opis aktywnosci
 - Warunki: uczestnik wyjazdu
 - Kroki: dodaje aktywnosc z opisem dlugosci 501 znakow
 - Oczekiwany wynik: aktywnosc nie zostaje dodana (kod 400) - limit do ustalenia, zobacz uwagi
-- Wynik: BLAD - aktywnosc zostala dodana (kod 201), zobacz B-05
+- Wynik: OK (po poprawce B-05, test ponowny 23.11.2026)
 
 
 ## Zadania (WF-07)
@@ -262,7 +262,7 @@ Data testow: 23.11.2026
 - Warunki: uczestnik wyjazdu
 - Kroki: dodaje zadanie z nazwa <script>alert(1)</script>
 - Oczekiwany wynik: zadanie nie zostaje dodane (kod 400) - tak jak przy nazwie i opisie wyjazdu
-- Wynik: BLAD - zadanie zostalo dodane (kod 201), zobacz B-04
+- Wynik: OK (po poprawce B-04, test ponowny 23.11.2026)
 
 
 ## Znalezione bledy
@@ -273,13 +273,13 @@ Data testow: 23.11.2026
   <script>alert(1)</script> sa zapisywane (kod 201). Przy wyjezdzie ten sam tekst daje 400.
 - Propozycja: uzyc tej samej funkcji containsScriptOrHtml co w tripController
   dla tytulu i opisu aktywnosci oraz nazwy zadania.
-- Status: zgloszony
+- Status: poprawiony - potwierdzony testem ponownym 23.11.2026
 
 ### B-05 Brak limitu dlugosci opisu aktywnosci
 - Wykryty przez: TC-99
 - Opis: opis aktywnosci o dlugosci 501 znakow zostaje zapisany (kod 201).
 - Propozycja: limit 500 znakow, tak jak opis wyjazdu.
-- Status: zgloszony
+- Status: poprawiony - potwierdzony testem ponownym 23.11.2026
 
 
 ## Uwagi dla backendu
