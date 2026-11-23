@@ -3,10 +3,9 @@ const fs = require('fs/promises');
 
 // wykrywanie potencjalnie niebezpiecznych znaczników HTML/JS (ochrona przed XSS)
 const containsScriptOrHtml = (text) =>
-  /<[^>]*>/.test(text) ||
-  /<\s*\/?\s*script/i.test(text) ||
-  /javascript\s*:/i.test(text) ||
-  /\bon\w+\s*=/i.test(text);
+  /<\s*\/?\s*(script|iframe|object|embed|style|link|meta|base|form|input|svg|math|img|video|audio|frame|frameset|applet)\b/i.test(text) ||
+  /<\s*[a-zA-Z][^>]*\bon[a-z]{2,}\s*=/i.test(text) ||
+  /(javascript|vbscript)\s*:/i.test(text);
 
 // wspólna walidacja pól wyjazdu dla tworzenia oraz edycji wyjazdu
 const validateTripData = ({ name, destination, start_date, end_date, description }) => {
