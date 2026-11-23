@@ -128,3 +128,109 @@ describe('Zapraszanie - uprawnienia (WF-05)', () => {
     expect([403, 404]).toContain(res.status);
   });
 });
+
+//---------------------------------------------ETAP 3 --------------------------------------------------------------//
+
+// logowanie, ktore zwraca tez id uzytkownika
+async function loginWithId(email) {
+  const res = await api
+    .post('/api/auth/login')
+    .send({ email, password: 'haslo123' });
+  return res.body.user.id;
+}
+
+function getMembers(token, tripId) {
+  return api
+    .get(`/api/trips/${tripId}/members`)
+    .set('Authorization', `Bearer ${token}`);
+}
+
+function changeRole(token, tripId, userId, role) {
+  return api
+    .patch(`/api/trips/${tripId}/members/${userId}`)
+    .set('Authorization', `Bearer ${token}`)
+    .send({ role });
+}
+
+let olaId;
+let kasiaId;
+let alicjaId;
+
+beforeAll(async () => {
+  olaId = await loginWithId('ola@example.com');
+  kasiaId = await loginWithId('kasia@example.com');
+  alicjaId = await loginWithId('alicja@example.com');
+});
+
+describe('Lista uczestnikow (WF-04, WF-05)', () => {
+  test('TC-46 lista uczestnikow z nickami', async () => {
+    await invite(tokenOli, tripId, 'kasia@example.com');
+
+    const res = await getMembers(tokenOli, tripId);
+
+    expect(res.status).toBe(200);
+    expect(res.body.members.length).toBe(2);
+    // organizator na poczatku listy
+    expect(res.body.members[0].display_name).toBe('Ola');
+    expect(res.body.members[0].role).toBe('ORGANIZER');
+
+    const kasia = res.body.members.find(m => m.id === kasiaId);
+    expect(kasia.display_name).toBe('Kasia');
+    expect(kasia.role).toBe('PARTICIPANT');
+  });
+
+  test('TC-47 osoba spoza wyjazdu nie widzi listy uczestnikow', async () => {
+    const res = await getMembers(tokenAlicji, tripId);
+
+    expect(res.status).toBe(403);
+  });
+});
+
+describe('Zmiana roli uczestnika', () => {
+  test('TC-48 organizator nadaje role organizatora', async () => {
+    await invite(tokenOli, tripId, 'kasia@example.com');
+
+    const res = await changeRole(tokenOli, tripId, kasiaId, 'ORGANIZER');
+
+    expect(res.status).toBe(200);
+    expect(res.body.member.role).toBe('ORGANIZER');
+  });
+
+  test('TC-49 uczestnik nie moze zmieniac rol', async () => {
+    await invite(tokenOli, tripId, 'kasia@example.com');
+
+    const res = await changeRole(tokenKasi, tripId, kasiaId, 'ORGANIZER');
+
+    expect(res.status).toBe(403);
+  });
+
+  test('TC-50 jedyny organizator nie moze oddac roli', async () => {
+    const res = await changeRole(tokenOli, tripId, olaId, 'PARTICIPANT');
+
+    expect(res.status).toBe(409);
+  });
+
+  test('TC-51 organizator oddaje role, gdy jest drugi organizator', async () => {
+    await invite(tokenOli, tripId, 'kasia@example.com');
+    await changeRole(tokenOli, tripId, kasiaId, 'ORGANIZER');
+
+    const res = await changeRole(tokenOli, tripId, olaId, 'PARTICIPANT');
+
+    expect(res.status).toBe(200);
+    expect(res.body.member.role).toBe('PARTICIPANT');
+  });
+
+  test('TC-52 nieprawidlowa rola', async () => {
+    await invite(tokenOli, tripId, 'kasia@example.com');
+
+    const res = await changeRole(tokenOli, tripId, kasiaId, 'ADMIN');
+
+    expect(res.status).toBe(400);
+  });
+
+  test('TC-53 zmiana roli osoby spoza wyjazdu', async () => {
+    const res = await changeRole(tokenOli, tripId, alicjaId, 'ORGANIZER');
+
+    expect(res.status).toBe(404);
+  });
+});

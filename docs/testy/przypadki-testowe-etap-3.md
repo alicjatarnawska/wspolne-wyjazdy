@@ -72,60 +72,59 @@ Data testow: 23.11.2026
 
 ## Lista uczestnikow (WF-04, WF-05)
 
-Data testow: -
+Data testow: 23.11.2026
 
 ### TC-46 Lista uczestnikow z nickami
 - Warunki: Ola utworzyla wyjazd i zaprosila Kasie
 - Kroki: Ola otwiera liste uczestnikow
 - Oczekiwany wynik: na liscie sa Ola i Kasia z nickami i rolami, organizator na poczatku (kod 200) - sprawdza tez TC-25 z etapu 2
-- Wynik: -
-
+- Wynik: OK
 ### TC-47 Osoba spoza wyjazdu nie widzi listy uczestnikow
 - Warunki: Alicja nie jest uczestnikiem wyjazdu Oli
 - Kroki: Alicja otwiera liste uczestnikow wyjazdu Oli
 - Oczekiwany wynik: brak dostepu (kod 403)
-- Wynik: -
+- Wynik: OK
 
 
 ## Zmiana roli uczestnika
 
-Data testow: -
+Data testow: 23.11.2026
 
 ### TC-48 Organizator nadaje role organizatora
 - Warunki: Ola jest organizatorem, Kasia jest uczestnikiem
 - Kroki: Ola zmienia role Kasi na ORGANIZER
 - Oczekiwany wynik: Kasia ma role ORGANIZER (kod 200)
-- Wynik: -
+- Wynik: OK
 
 ### TC-49 Uczestnik nie moze zmieniac rol
 - Warunki: Kasia jest uczestnikiem wyjazdu Oli
 - Kroki: Kasia probuje zmienic swoja role na ORGANIZER
 - Oczekiwany wynik: rola sie nie zmienia, brak uprawnien (kod 403)
-- Wynik: -
+- Wynik: OK
 
 ### TC-50 Jedyny organizator nie moze oddac roli
 - Warunki: Ola jest jedynym organizatorem
 - Kroki: Ola zmienia swoja role na PARTICIPANT
 - Oczekiwany wynik: rola sie nie zmienia, komunikat ze wyjazd musi miec organizatora (kod 409)
-- Wynik: -
+- Wynik: OK
 
 ### TC-51 Organizator oddaje role, gdy jest drugi organizator
 - Warunki: Ola i Kasia sa organizatorkami (po TC-48)
 - Kroki: Ola zmienia swoja role na PARTICIPANT
 - Oczekiwany wynik: Ola ma role PARTICIPANT (kod 200)
-- Wynik: -
+- Wynik: OK
 
 ### TC-52 Nieprawidlowa rola
 - Warunki: Ola jest organizatorem, Kasia jest uczestnikiem
 - Kroki: Ola zmienia role Kasi na ADMIN
 - Oczekiwany wynik: rola sie nie zmienia, komunikat o nieprawidlowej roli (kod 400)
-- Wynik: -
+- Wynik: OK
 
 ### TC-53 Zmiana roli osoby spoza wyjazdu
 - Warunki: Ola jest organizatorem, Alicja nie jest uczestnikiem
 - Kroki: Ola zmienia role Alicji na ORGANIZER
 - Oczekiwany wynik: komunikat ze osoba nie jest uczestnikiem (kod 404)
-- Wynik: -
+- Wynik: OK
 
 
 ## Profil uzytkownika
