@@ -20,7 +20,7 @@ Data testow: 23.11.2026
 - Warunki: uzytkownik jest zalogowany
 - Kroki: tworzy wyjazd z opisem "budzet < 200 zl, dzieci > 5 lat"
 - Oczekiwany wynik: wyjazd sie tworzy (kod 201) - to zwykly tekst, nie kod HTML
-- Wynik: BLAD - zwykly tekst z < i > odrzucany jako HTML (zobacz B-03)
+- Wynik: OK (po poprawce B-03, test ponowny 23.11.2026)
 
 ### TC-39 Opis o dlugosci dokladnie 500 znakow
 - Warunki: uzytkownik jest zalogowany
@@ -253,7 +253,7 @@ Data testow: -
 - Opis: filtr /<[^>]*>/ uznaje za HTML kazdy fragment miedzy < a >, wiec opis
   "budzet < 200 zl, dzieci > 5 lat" dostaje 400 zamiast 201.
 - Propozycja: /<\/?[a-z!][^>]*>/i - tylko prawdziwe znaczniki.
-- Status: zgloszony
+- Status: Status: poprawiony - potwierdzony testem ponownym 23.11.2026
 
 
 ## Uwagi dla backendu
