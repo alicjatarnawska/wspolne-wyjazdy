@@ -31,7 +31,7 @@ const validateTripData = ({ name, destination, start_date, end_date, description
   }
 
   if (containsScriptOrHtml(trimmedName) || containsScriptOrHtml(trimmedDestination)) {
-    return { error: 'Nazwa oraz miejsce docelowe nie mogą zawierać kodu HTML ani skryptów.' };
+    return { error: 'Nazwa oraz miejsce docelowe nie mogą zawierać niebezpiecznego kodu HTML ani skryptów.' };
   }
 
   if (end_date < start_date) {
@@ -51,7 +51,7 @@ const validateTripData = ({ name, destination, start_date, end_date, description
     }
 
     if (containsScriptOrHtml(trimmedDescription)) {
-      return { error: 'Opis wyjazdu nie może zawierać kodu HTML ani skryptów.' };
+      return { error: 'Opis wyjazdu nie może zawierać niebezpiecznego kodu HTML ani skryptów.' };
     }
 
     normalizedDescription = trimmedDescription || null;
