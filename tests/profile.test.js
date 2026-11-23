@@ -9,7 +9,7 @@ function uniqueEmail() {
 // nowe konto dla kazdego testu, zeby nie zmieniac danych kont testowych
 async function createUser(displayName = 'Zuza') {
   const email = uniqueEmail();
-  await api
+  const reg = await api
     .post('/api/auth/register')
     .send({ email, password: 'haslo123', display_name: displayName });
 
@@ -17,7 +17,7 @@ async function createUser(displayName = 'Zuza') {
     .post('/api/auth/login')
     .send({ email, password: 'haslo123' });
 
-  return { email, token: res.body.token };
+  return { email, id: reg.body.user.id, token: res.body.token };
 }
 
 function patchProfile(token, field, body) {
@@ -129,5 +129,104 @@ describe('Profil uzytkownika', () => {
     });
 
     expect(res.status).toBe(400);
+  });
+});
+
+//--------------------------------------------- USUWANIE KONTA --------------------------------------------------------------//
+
+function auth(req, token) {
+  return req.set('Authorization', `Bearer ${token}`);
+}
+
+async function createTrip(token) {
+  const res = await auth(api.post('/api/trips'), token).send({
+    name: 'Test usuwanie konta',
+    destination: 'Gizycko',
+    start_date: '2027-05-14',
+    end_date: '2027-05-16',
+  });
+  return res.body.trip.id;
+}
+
+function deleteAccount(token, password) {
+  return auth(api.delete('/api/users/profile'), token).send({ password });
+}
+
+describe('Usuwanie konta', () => {
+  test('TC-65 usuniecie konta bez hasla', async () => {
+    const res = await deleteAccount(user.token, undefined);
+
+    expect(res.status).toBe(400);
+  });
+
+  test('TC-66 usuniecie konta z blednym haslem', async () => {
+    const res = await deleteAccount(user.token, 'zlehaslo');
+
+    expect(res.status).toBe(401);
+  });
+
+  test('TC-67 jedyny organizator nie moze usunac konta', async () => {
+    const other = await createUser('Kasia');
+    const tripId = await createTrip(user.token);
+    await auth(api.post(`/api/trips/${tripId}/members`), user.token).send({ email: other.email });
+
+    const res = await deleteAccount(user.token, 'haslo123');
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toContain('Test usuwanie konta'); // nazwa wyjazdu w komunikacie
+  });
+
+  test('TC-68 poprawne usuniecie konta', async () => {
+    const res = await deleteAccount(user.token, 'haslo123');
+    expect(res.status).toBe(200);
+
+    const login = await api
+      .post('/api/auth/login')
+      .send({ email: user.email, password: 'haslo123' });
+    expect(login.status).toBe(401);
+  });
+
+  test('TC-69 wyjazd bez innych uczestnikow usuwa sie razem z kontem', async () => {
+    const tripId = await createTrip(user.token);
+    await deleteAccount(user.token, 'haslo123');
+
+    // 404 = wyjazd nie istnieje (gdyby istnial, obca osoba dostalaby 403)
+    const other = await createUser();
+    const res = await auth(api.get(`/api/trips/${tripId}`), other.token);
+    expect(res.status).toBe(404);
+  });
+
+  test('TC-70 mozna usunac konto po przekazaniu roli organizatora', async () => {
+    const other = await createUser('Kasia');
+    const tripId = await createTrip(user.token);
+    await auth(api.post(`/api/trips/${tripId}/members`), user.token).send({ email: other.email });
+    await auth(api.patch(`/api/trips/${tripId}/members/${other.id}`), user.token).send({ role: 'ORGANIZER' });
+
+    const res = await deleteAccount(user.token, 'haslo123');
+    expect(res.status).toBe(200);
+
+    // wyjazd zostaje, a Kasia jest w nim organizatorem
+    const trip = await auth(api.get(`/api/trips/${tripId}`), other.token);
+    expect(trip.status).toBe(200);
+    expect(trip.body.trip.my_role).toBe('ORGANIZER');
+  });
+
+  test('TC-71 zadania usunietego uzytkownika zostaja bez przypisania', async () => {
+    const participant = await createUser('Kasia');
+    const tripId = await createTrip(user.token);
+    await auth(api.post(`/api/trips/${tripId}/members`), user.token).send({ email: participant.email });
+
+    // zadanie przypisane uczestniczce
+    const created = await auth(api.post(`/api/trips/${tripId}/tasks`), user.token)
+      .send({ name: 'Kupic bilety', assigned_user_id: participant.id });
+    const taskId = created.body.task.id;
+
+    // uczestniczka usuwa konto
+    await deleteAccount(participant.token, 'haslo123');
+
+    const res = await auth(api.get(`/api/trips/${tripId}/tasks`), user.token);
+    const task = res.body.tasks.find(t => t.id === taskId);
+    expect(task).toBeDefined();               // zadanie zostalo
+    expect(task.assigned_user_id).toBeNull(); // ale bez osoby
   });
 });

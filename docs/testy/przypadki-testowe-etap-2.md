@@ -33,7 +33,7 @@ Data testow: 17.11.2026
 - Warunki: Kasia zostala dodana (po TC-14)
 - Kroki: Ola otwiera liste uczestnikow wyjazdu
 - Oczekiwany wynik: na liscie sa Ola (organizator) i Kasia (uczestnik), wyswietlone nickami
-- Wynik: - OK (sprawdzone w TC-46, etap 3, 23.11.2026)
+- Wynik: OK (sprawdzone w TC-46, etap 3, 23.11.2026)
 
 
 ## Zapraszanie - bledne dane

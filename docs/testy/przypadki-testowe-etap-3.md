@@ -3,6 +3,7 @@
 Opis tego, co testujemy i jakiego wyniku sie spodziewamy.
 Po przetestowaniu wpisuje wynik: OK albo BLAD (+ krotki opis bledu).
 Numeracja jest kontynuacja pliku przypadki-testowe-etap-2.md (TC-14 - TC-36).
+Testy automatyczne API: tests/trips.test.js, tests/members.test.js, tests/profile.test.js (uruchomienie: npm test w folderze tests).
 
 
 ## Opis wyjazdu - walidacja i bezpieczenstwo (WF-03)
@@ -129,120 +130,120 @@ Data testow: 23.11.2026
 
 ## Profil uzytkownika
 
-Data testow: -
+Data testow: 23.11.2026
 
 ### TC-54 Podglad profilu
 - Warunki: uzytkownik jest zalogowany
 - Kroki: otwiera swoj profil
 - Oczekiwany wynik: widzi swoj e-mail i nick (kod 200)
-- Wynik: -
+- Wynik: OK
 
 ### TC-55 Zmiana nicku
 - Warunki: uzytkownik jest zalogowany
 - Kroki: zmienia nick na "Nowy nick"
 - Oczekiwany wynik: nick zostaje zmieniony (kod 200)
-- Wynik: -
+- Wynik: OK
 
 ### TC-56 Nick taki sam jak obecny
 - Warunki: uzytkownik ma nick "Zuza"
 - Kroki: zmienia nick na "Zuza"
 - Oczekiwany wynik: komunikat ze nick sie nie rozni (kod 400)
-- Wynik: -
+- Wynik: OK
 
 ### TC-57 Nieprawidlowy nick przy zmianie
 - Warunki: uzytkownik jest zalogowany
 - Kroki: zmienia nick na same spacje, a potem na 51 znakow
 - Oczekiwany wynik: nick sie nie zmienia, komunikat o bledzie (kod 400)
-- Wynik: -
+- Wynik: OK
 
 ### TC-58 Zmiana e-maila
 - Warunki: uzytkownik jest zalogowany
 - Kroki: zmienia e-mail na nowy, wolny adres
 - Oczekiwany wynik: e-mail zostaje zmieniony, mozna sie nim zalogowac (kod 200)
-- Wynik: -
+- Wynik: OK
 
 ### TC-59 E-mail zajety
 - Warunki: istnieje konto kasia@example.com
 - Kroki: inny uzytkownik zmienia e-mail na kasia@example.com
 - Oczekiwany wynik: e-mail sie nie zmienia, komunikat ze adres jest zajety (kod 409)
-- Wynik: -
+- Wynik: OK
 
 ### TC-60 Nieprawidlowy format e-maila
 - Warunki: uzytkownik jest zalogowany
 - Kroki: zmienia e-mail na "abc"
 - Oczekiwany wynik: e-mail sie nie zmienia, komunikat o blednym adresie (kod 400)
-- Wynik: -
+- Wynik: OK
 
 ### TC-61 Zmiana hasla
 - Warunki: uzytkownik jest zalogowany
 - Kroki: podaje obecne haslo i nowe haslo, potem loguje sie nowym haslem
 - Oczekiwany wynik: haslo zostaje zmienione (kod 200), logowanie nowym haslem dziala
-- Wynik: -
+- Wynik: OK
 
 ### TC-62 Bledne obecne haslo
 - Warunki: uzytkownik jest zalogowany
 - Kroki: podaje nieprawidlowe obecne haslo i nowe haslo
 - Oczekiwany wynik: haslo sie nie zmienia, komunikat o blednym hasle (kod 401)
-- Wynik: -
+- Wynik: OK
 
 ### TC-63 Za krotkie nowe haslo
 - Warunki: uzytkownik jest zalogowany
 - Kroki: podaje nowe haslo krotsze niz 6 znakow
 - Oczekiwany wynik: haslo sie nie zmienia, komunikat o zbyt krotkim hasle (kod 400)
-- Wynik: -
+- Wynik: OK
 
 ### TC-64 Nowe haslo takie samo jak obecne
 - Warunki: uzytkownik jest zalogowany
 - Kroki: podaje jako nowe haslo to samo co obecne
 - Oczekiwany wynik: komunikat ze nowe haslo musi sie roznic (kod 400)
-- Wynik: -
+- Wynik: OK
 
 
 ## Usuwanie konta
 
-Data testow: -
+Data testow: 23.11.2026
 
 ### TC-65 Usuniecie konta bez hasla
 - Warunki: uzytkownik jest zalogowany
 - Kroki: usuwa konto bez podania hasla
 - Oczekiwany wynik: konto nie zostaje usuniete, komunikat o wymaganym hasle (kod 400)
-- Wynik: -
+- Wynik: OK
 
 ### TC-66 Usuniecie konta z blednym haslem
 - Warunki: uzytkownik jest zalogowany
 - Kroki: usuwa konto, podajac nieprawidlowe haslo
 - Oczekiwany wynik: konto nie zostaje usuniete, komunikat o blednym hasle (kod 401)
-- Wynik: -
+- Wynik: OK
 
 ### TC-67 Jedyny organizator nie moze usunac konta
 - Warunki: uzytkownik jest jedynym organizatorem wyjazdu, w ktorym sa inni uczestnicy
 - Kroki: usuwa konto, podajac poprawne haslo
 - Oczekiwany wynik: konto nie zostaje usuniete, komunikat z nazwa wyjazdu (kod 409)
-- Wynik: -
+- Wynik: OK
 
 ### TC-68 Poprawne usuniecie konta
 - Warunki: uzytkownik nie jest jedynym organizatorem zadnego wyjazdu z innymi uczestnikami
 - Kroki: usuwa konto, podajac poprawne haslo, potem probuje sie zalogowac
 - Oczekiwany wynik: konto zostaje usuniete (kod 200), logowanie nie dziala (kod 401)
-- Wynik: -
+- Wynik: OK
 
 ### TC-69 Wyjazd bez innych uczestnikow usuwa sie razem z kontem
 - Warunki: uzytkownik ma wyjazd, w ktorym jest jedyna osoba
 - Kroki: usuwa konto
 - Oczekiwany wynik: wyjazd znika z bazy razem z kontem
-- Wynik: -
+- Wynik: OK
 
 ### TC-70 Mozna usunac konto po przekazaniu roli organizatora
 - Warunki: jak w TC-67, organizator nadaje role ORGANIZER innemu uczestnikowi
 - Kroki: usuwa konto, podajac poprawne haslo
 - Oczekiwany wynik: konto zostaje usuniete (kod 200), wyjazd zostaje z nowym organizatorem
-- Wynik: -
+- Wynik: OK
 
 ### TC-71 Zadania usunietego uzytkownika zostaja bez przypisania
 - Warunki: uruchomiona migracja 003, uzytkownik ma przypisane zadanie w wyjezdzie
-- Kroki: usuwa konto, potem w pgAdmin: SELECT name, assigned_user_id FROM tasks;
+- Kroki: uczestnik z przypisanym zadaniem usuwa konto, organizator otwiera liste zadan
 - Oczekiwany wynik: zadanie nadal istnieje, assigned_user_id jest pusty (NULL)
-- Wynik: -
+- Wynik: OK
 
 
 ## Znalezione bledy
@@ -252,13 +253,13 @@ Data testow: -
 - Opis: filtr /<[^>]*>/ uznaje za HTML kazdy fragment miedzy < a >, wiec opis
   "budzet < 200 zl, dzieci > 5 lat" dostaje 400 zamiast 201.
 - Propozycja: /<\/?[a-z!][^>]*>/i - tylko prawdziwe znaczniki.
-- Status: Status: poprawiony - potwierdzony testem ponownym 23.11.2026
+- Status: poprawiony - potwierdzony testem ponownym 23.11.2026
 
 
 ## Uwagi dla backendu
 
 - Opis wyjazdu: max 500 znakow, musi byc tekstem, bez HTML i skryptow (TC-37 - TC-41).
-- Filtr HTML odrzuca tez zwykly tekst z < i > - blad B-03 (TC-38).
+- Filtr HTML odrzucal zwykly tekst z < i > - blad B-03 (TC-38), poprawiony.
 - Usuwanie konta nie sprawdza dlugow - do dodania, gdy beda wydatki
   (dlug w obie strony: uzytkownik jest komus winny albo ktos jest winny jemu).
 - TC-43 i TC-46 sprawdzaja tez TC-12 (etap 1) i TC-25 (etap 2), ktore wczesniej nie mogly byc przetestowane.
