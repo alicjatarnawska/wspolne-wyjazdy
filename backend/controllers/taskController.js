@@ -1,5 +1,11 @@
 const pool = require('../config/db');
 
+// wykrywanie potencjalnie niebezpiecznych znaczników HTML/JS (ochrona przed XSS)
+const containsScriptOrHtml = (text) =>
+  /<\s*\/?\s*(script|iframe|object|embed|style|link|meta|base|form|input|svg|math|img|video|audio|frame|frameset|applet)\b/i.test(text) ||
+  /<\s*[a-zA-Z][^>]*\bon[a-z]{2,}\s*=/i.test(text) ||
+  /(javascript|vbscript)\s*:/i.test(text);
+
 // wspólna walidacja pól zadania dla tworzenia i edycji
 const validateTaskData = ({ name, assigned_user_id, due_date, status }) => {
 
@@ -9,6 +15,9 @@ const validateTaskData = ({ name, assigned_user_id, due_date, status }) => {
   const trimmedName = name.trim();
   if (trimmedName.length > 150) {
     return { error: 'Nazwa zadania może mieć maksymalnie 150 znaków.' };
+  }
+  if (containsScriptOrHtml(trimmedName)) {
+    return { error: 'Nazwa zadania nie może zawierać niebezpiecznego kodu HTML ani skryptów.' };
   }
 
   // assigned_user_id - opcjonalny, ale jeśli podany, musi być liczbą całkowitą większą od 0
@@ -25,7 +34,7 @@ const validateTaskData = ({ name, assigned_user_id, due_date, status }) => {
   const normalizedDueDate =
     typeof due_date === 'string' && due_date.trim() ? due_date.trim() : null;
 
-  // status zadania — domyślnie 'TODO', dozwolone tylko wartości ze schematu CHECK
+  // status zadania — domyślnie 'TODO'
   const normalizedStatus = status !== undefined ? status : 'TODO';
   if (normalizedStatus !== 'TODO' && normalizedStatus !== 'DONE') {
     return { error: 'Nieprawidłowy status zadania. Dozwolone wartości: TODO lub DONE.' };

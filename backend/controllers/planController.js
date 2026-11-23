@@ -1,5 +1,11 @@
 const pool = require('../config/db');
 
+// wykrywanie potencjalnie niebezpiecznych znaczników HTML/JS (ochrona przed XSS)
+const containsScriptOrHtml = (text) =>
+  /<\s*\/?\s*(script|iframe|object|embed|style|link|meta|base|form|input|svg|math|img|video|audio|frame|frameset|applet)\b/i.test(text) ||
+  /<\s*[a-zA-Z][^>]*\bon[a-z]{2,}\s*=/i.test(text) ||
+  /(javascript|vbscript)\s*:/i.test(text);
+
 // sprawdzenie, czy ciąg "YYYY-MM-DD" jest poprawną datą kalendarzową
 const isValidDateString = (value) => {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
@@ -19,8 +25,13 @@ const validatePlanItemData = ({ date, time, title, description }) => {
   if (typeof title !== 'string' || !title.trim()) {
     return { error: 'Tytuł aktywności jest wymagany.' };
   }
+
+  const trimmedTitle = title.trim();
   if (title.trim().length > 150) {
     return { error: 'Tytuł aktywności może mieć maksymalnie 150 znaków.' };
+  }
+  if (containsScriptOrHtml(trimmedTitle)) {
+    return { error: 'Tytuł aktywności nie może zawierać niebezpiecznego kodu HTML ani skryptów.' };
   }
 
   if (!isValidDateString(date)) {
@@ -40,7 +51,15 @@ const validatePlanItemData = ({ date, time, title, description }) => {
     if (typeof description !== 'string') {
       return { error: 'Opis aktywności musi być tekstem.' };
     }
-    normalizedDescription = description.trim() || null;
+    const trimmedDescription = description.trim();
+    if (trimmedDescription.length > 500) {
+      return { error: 'Opis aktywności może mieć maksymalnie 500 znaków.' };
+    }
+
+    if (containsScriptOrHtml(trimmedDescription)) {
+      return { error: 'Opis aktywności nie może zawierać niebezpiecznego kodu HTML ani skryptów.' };
+    }
+    normalizedDescription = trimmedDescription || null;
   }
 
   return {
