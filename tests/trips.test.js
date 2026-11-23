@@ -209,4 +209,117 @@ describe('Uprawnienia (WF-05)', () => {
     const found = res.body.trips.some(t => t.id === tripId);
     expect(found).toBe(false);
   });
+
+  
+  //---------------------------------------------ETAP 3 --------------------------------------------------------------//
+
+  describe('Opis wyjazdu (WF-03)', () => {
+  // dane wyjazdu z wybranym opisem
+  function tripWithDescription(description) {
+    return {
+      name: 'Test opis',
+      destination: 'Gizycko',
+      start_date: '2027-05-14',
+      end_date: '2027-05-16',
+      description,
+    };
+  }
+
+  test('TC-37 opis ze skryptem', async () => {
+    const res = await api
+      .post('/api/trips')
+      .set('Authorization', `Bearer ${token}`)
+      .send(tripWithDescription("<script>alert('test')</script>"));
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeDefined();
+  });
+
+  test('TC-38 znaki < i > w zwyklym tekscie', async () => {
+    const res = await api
+      .post('/api/trips')
+      .set('Authorization', `Bearer ${token}`)
+      .send(tripWithDescription('budzet < 200 zl, dzieci > 5 lat'));
+
+    expect(res.status).toBe(201);
+  });
+
+  test('TC-39 opis o dlugosci 500 znakow', async () => {
+    const res = await api
+      .post('/api/trips')
+      .set('Authorization', `Bearer ${token}`)
+      .send(tripWithDescription('a'.repeat(500)));
+
+    expect(res.status).toBe(201);
+  });
+
+  test('TC-40 opis za dlugi', async () => {
+    const res = await api
+      .post('/api/trips')
+      .set('Authorization', `Bearer ${token}`)
+      .send(tripWithDescription('a'.repeat(501)));
+
+    expect(res.status).toBe(400);
+  });
+
+  test('TC-41 opis nie jest tekstem', async () => {
+    const res = await api
+      .post('/api/trips')
+      .set('Authorization', `Bearer ${token}`)
+      .send(tripWithDescription(123));
+
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('Szczegoly wyjazdu (WF-05)', () => {
+  let tripId;
+
+  beforeAll(async () => {
+    const res = await api
+      .post('/api/trips')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        name: 'Test szczegoly',
+        destination: 'Gizycko',
+        start_date: '2027-05-14',
+        end_date: '2027-05-16',
+      });
+    tripId = res.body.trip.id;
+  });
+
+  test('TC-42 uczestnik widzi szczegoly wyjazdu', async () => {
+    const res = await api
+      .get(`/api/trips/${tripId}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.trip.name).toBe('Test szczegoly');
+    expect(res.body.trip.my_role).toBe('ORGANIZER');
+  });
+
+  test('TC-43 osoba spoza wyjazdu nie widzi szczegolow', async () => {
+    const res = await api
+      .get(`/api/trips/${tripId}`)
+      .set('Authorization', `Bearer ${tokenKasi}`);
+
+    expect(res.status).toBe(403);
+  });
+
+  test('TC-44 wyjazd nie istnieje', async () => {
+    const res = await api
+      .get('/api/trips/999999')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(404);
+  });
+
+  test('TC-45 nieprawidlowy numer wyjazdu', async () => {
+    const res = await api
+      .get('/api/trips/abc')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(400);
+  });
+});
 });
