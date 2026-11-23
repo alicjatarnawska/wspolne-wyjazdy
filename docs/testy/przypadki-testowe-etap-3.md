@@ -7,37 +7,37 @@ Numeracja jest kontynuacja pliku przypadki-testowe-etap-2.md (TC-14 - TC-36).
 
 ## Opis wyjazdu - walidacja i bezpieczenstwo (WF-03)
 
-Limit opisu: maksymalnie 1000 znakow (do ustalenia, zobacz uwagi).
+Opis: opcjonalny, maksymalnie 500 znakow, bez kodu HTML i skryptow.
 Data testow: -
 
-### TC-37 Opis ze skryptem nie jest wykonywany
+### TC-37 Opis ze skryptem
 - Warunki: uzytkownik jest zalogowany
 - Kroki: tworzy wyjazd z opisem <script>alert('test')</script>
-- Oczekiwany wynik: wyjazd sie tworzy, a opis jest zapisany jako zwykly tekst albo odrzucony (kod 400)
+- Oczekiwany wynik: wyjazd sie nie tworzy, komunikat ze opis nie moze zawierac kodu (kod 400)
 - Wynik: -
 
-### TC-38 Skrypt w opisie wyswietla sie jako tekst
-- Warunki: istnieje wyjazd z TC-37
-- Kroki: uczestnik otwiera szczegoly wyjazdu w przegladarce
-- Oczekiwany wynik: na ekranie widac napis <script>..., nie pojawia sie okienko alert
-- Wynik: -
-
-### TC-39 Opis o dlugosci dokladnie 1000 znakow
+### TC-38 Znaki < i > w zwyklym tekscie
 - Warunki: uzytkownik jest zalogowany
-- Kroki: tworzy wyjazd z opisem dlugosci 1000 znakow
+- Kroki: tworzy wyjazd z opisem "budzet < 200 zl, dzieci > 5 lat"
+- Oczekiwany wynik: wyjazd sie tworzy (kod 201) - to zwykly tekst, nie kod HTML
+- Wynik: -
+
+### TC-39 Opis o dlugosci dokladnie 500 znakow
+- Warunki: uzytkownik jest zalogowany
+- Kroki: tworzy wyjazd z opisem dlugosci 500 znakow
 - Oczekiwany wynik: wyjazd sie tworzy (kod 201)
 - Wynik: -
 
 ### TC-40 Za dlugi opis
 - Warunki: uzytkownik jest zalogowany
-- Kroki: tworzy wyjazd z opisem dlugosci 1001 znakow
+- Kroki: tworzy wyjazd z opisem dlugosci 501 znakow
 - Oczekiwany wynik: wyjazd sie nie tworzy, komunikat o zbyt dlugim opisie (kod 400)
 - Wynik: -
 
 ### TC-41 Opis nie jest tekstem
 - Warunki: uzytkownik jest zalogowany
 - Kroki: wysyla do API opis jako liczbe (description: 123)
-- Oczekiwany wynik: wyjazd sie nie tworzy, komunikat o bledzie (kod 400)
+- Oczekiwany wynik: wyjazd sie nie tworzy, komunikat ze opis musi byc tekstem (kod 400)
 - Wynik: -
 
 
@@ -253,10 +253,8 @@ Brak.
 
 ## Uwagi dla backendu
 
-- Opis wyjazdu nie jest teraz walidowany w createTrip (TC-37 - TC-41):
-  - do ustalenia limit dlugosci (propozycja: 1000 znakow),
-  - sprawdzanie, czy opis jest tekstem,
-  - frontend nie moze wyswietlac opisu przez v-html (ochrona przed XSS).
+- Opis wyjazdu: max 500 znakow, musi byc tekstem, bez HTML i skryptow (TC-37 - TC-41).
+- Filtr HTML odrzuca kazdy tekst z fragmentem miedzy < a > - sprawdza to TC-38.
 - Usuwanie konta nie sprawdza dlugow - do dodania, gdy beda wydatki
   (dlug w obie strony: uzytkownik jest komus winny albo ktos jest winny jemu).
 - TC-43 i TC-46 sprawdzaja tez TC-12 (etap 1) i TC-25 (etap 2), ktore wczesniej nie mogly byc przetestowane.
@@ -268,8 +266,8 @@ Brak.
   - DELETE /api/users/profile - usuniecie konta, dane: { "password": "..." }
 - Kody odpowiedzi:
   - 200 - pobrano / zmieniono / usunieto
-  - 201 - wyjazd utworzony
-  - 400 - bledne dane (TC-40, TC-41, TC-45, TC-52, TC-56, TC-57, TC-60, TC-63 - TC-65)
+  - 201 - wyjazd utworzony (TC-38, TC-39)
+  - 400 - bledne dane (TC-37, TC-40, TC-41, TC-45, TC-52, TC-56, TC-57, TC-60, TC-63 - TC-65)
   - 401 - bledne haslo (TC-62, TC-66), logowanie po usunieciu konta (TC-68)
   - 403 - brak uprawnien (TC-43, TC-47, TC-49)
   - 404 - nie znaleziono (TC-44, TC-53)
