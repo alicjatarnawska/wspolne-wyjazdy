@@ -234,3 +234,81 @@ describe('Zmiana roli uczestnika', () => {
     expect(res.status).toBe(404);
   });
 });
+
+//---------------------------------------------ETAP 4 --------------------------------------------------------------//
+
+// usuniecie osoby z wyjazdu, 'me' oznacza opuszczenie wyjazdu
+function removeMember(token, tripId, userId) {
+  return api
+    .delete(`/api/trips/${tripId}/members/${userId}`)
+    .set('Authorization', `Bearer ${token}`);
+}
+
+describe('Wyrzucanie i opuszczanie wyjazdu', () => {
+  test('TC-80 organizator wyrzuca uczestnika', async () => {
+    await invite(tokenOli, tripId, 'kasia@example.com');
+
+    const res = await removeMember(tokenOli, tripId, kasiaId);
+    expect(res.status).toBe(200);
+
+    const trips = await api.get('/api/trips').set('Authorization', `Bearer ${tokenKasi}`);
+    const trip = trips.body.trips.find(t => t.id === tripId);
+    expect(trip).toBeUndefined();
+  });
+
+  test('TC-81 uczestnik nie moze wyrzucic innej osoby', async () => {
+    await invite(tokenOli, tripId, 'kasia@example.com');
+    await invite(tokenOli, tripId, 'alicja@example.com');
+
+    const res = await removeMember(tokenKasi, tripId, alicjaId);
+    expect(res.status).toBe(403);
+
+    const members = await getMembers(tokenOli, tripId);
+    expect(members.body.members.length).toBe(3);
+  });
+
+  test('TC-82 uczestnik opuszcza wyjazd', async () => {
+    await invite(tokenOli, tripId, 'kasia@example.com');
+
+    const res = await removeMember(tokenKasi, tripId, 'me');
+    expect(res.status).toBe(200);
+
+    const members = await getMembers(tokenOli, tripId);
+    expect(members.body.members.length).toBe(1);
+  });
+
+  test('TC-83 jedyny organizator nie moze opuscic wyjazdu', async () => {
+    await invite(tokenOli, tripId, 'kasia@example.com');
+
+    const res = await removeMember(tokenOli, tripId, 'me');
+    expect(res.status).toBe(409);
+  });
+
+  test('TC-84 jedyny uczestnik nie moze opuscic wyjazdu', async () => {
+    const res = await removeMember(tokenOli, tripId, 'me');
+    expect(res.status).toBe(409);
+  });
+
+  test('TC-85 zadania wyrzuconej osoby zostaja bez przypisania', async () => {
+    await invite(tokenOli, tripId, 'kasia@example.com');
+    const created = await api
+      .post(`/api/trips/${tripId}/tasks`)
+      .set('Authorization', `Bearer ${tokenOli}`)
+      .send({ name: 'Kupic bilety', assigned_user_id: kasiaId });
+    const taskId = created.body.task.id;
+
+    await removeMember(tokenOli, tripId, kasiaId);
+
+    const res = await api
+      .get(`/api/trips/${tripId}/tasks`)
+      .set('Authorization', `Bearer ${tokenOli}`);
+    const task = res.body.tasks.find(t => t.id === taskId);
+    expect(task).toBeDefined();
+    expect(task.assigned_user_id).toBeNull();
+  });
+
+  test('TC-86 wyrzucenie osoby spoza wyjazdu', async () => {
+    const res = await removeMember(tokenOli, tripId, alicjaId);
+    expect(res.status).toBe(404);
+  });
+});

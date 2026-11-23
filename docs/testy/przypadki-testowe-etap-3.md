@@ -8,7 +8,7 @@ Testy automatyczne API: tests/trips.test.js, tests/members.test.js, tests/profil
 
 ## Opis wyjazdu - walidacja i bezpieczenstwo (WF-03)
 
-Opis: opcjonalny, maksymalnie 500 znakow, bez kodu HTML i skryptow.
+Opis: opcjonalny, maksymalnie 500 znakow, bez skryptow i niebezpiecznego kodu HTML.
 Data testow: 23.11.2026
 
 ### TC-37 Opis ze skryptem
@@ -258,7 +258,7 @@ Data testow: 23.11.2026
 
 ## Uwagi dla backendu
 
-- Opis wyjazdu: max 500 znakow, musi byc tekstem, bez HTML i skryptow (TC-37 - TC-41).
+- Opis wyjazdu: max 500 znakow, musi byc tekstem, bez skryptow i niebezpiecznego kodu HTML (TC-37 - TC-41).
 - Filtr HTML odrzucal zwykly tekst z < i > - blad B-03 (TC-38), poprawiony.
 - Usuwanie konta nie sprawdza dlugow - do dodania, gdy beda wydatki
   (dlug w obie strony: uzytkownik jest komus winny albo ktos jest winny jemu).

@@ -322,3 +322,106 @@ describe('Szczegoly wyjazdu (WF-05)', () => {
     expect(res.status).toBe(400);
   });
 });
+
+//---------------------------------------------ETAP 4 --------------------------------------------------------------//
+
+function auth(req, t) {
+  return req.set('Authorization', `Bearer ${t}`);
+}
+
+async function createTestTrip() {
+  const res = await auth(api.post('/api/trips'), token).send({
+    name: 'Test edycja',
+    destination: 'Gizycko',
+    start_date: '2027-05-14',
+    end_date: '2027-05-16',
+  });
+  return res.body.trip.id;
+}
+
+function inviteKasia(tripId) {
+  return auth(api.post(`/api/trips/${tripId}/members`), token).send({ email: 'kasia@example.com' });
+}
+
+describe('Edycja wyjazdu', () => {
+  let tripId;
+
+  beforeEach(async () => {
+    tripId = await createTestTrip();
+  });
+
+  test('TC-72 organizator edytuje wyjazd', async () => {
+    const res = await auth(api.patch(`/api/trips/${tripId}`), token).send({ name: 'Mazury 2027' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.trip.name).toBe('Mazury 2027');
+  });
+
+  test('TC-73 uczestnik nie moze edytowac wyjazdu', async () => {
+    await inviteKasia(tripId);
+
+    const res = await auth(api.patch(`/api/trips/${tripId}`), tokenKasi).send({ name: 'Zmiana Kasi' });
+
+    expect(res.status).toBe(403);
+  });
+
+  test('TC-74 edycja z data koncowa przed poczatkowa', async () => {
+    const res = await auth(api.patch(`/api/trips/${tripId}`), token).send({ end_date: '2027-05-10' });
+
+    expect(res.status).toBe(400);
+  });
+
+  test('TC-75 skrocenie terminu, gdy w harmonogramie sa aktywnosci poza nowymi datami', async () => {
+    // aktywnosc w ostatnim dniu wyjazdu
+    await auth(api.post(`/api/trips/${tripId}/plan`), token)
+      .send({ date: '2027-05-16', title: 'Powrot' });
+
+    const res = await auth(api.patch(`/api/trips/${tripId}`), token).send({ end_date: '2027-05-15' });
+
+    expect(res.status).toBe(409);
+  });
+
+    test('TC-76 edycja opisu z niebezpiecznym kodem HTML', async () => {
+    const res = await auth(api.patch(`/api/trips/${tripId}`), token)
+      .send({ description: '<img src=x onerror="alert(1)">' });
+
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('Usuwanie wyjazdu', () => {
+  let tripId;
+
+  beforeEach(async () => {
+    tripId = await createTestTrip();
+  });
+
+  test('TC-77 organizator usuwa wyjazd', async () => {
+    const res = await auth(api.delete(`/api/trips/${tripId}`), token);
+    expect(res.status).toBe(200);
+
+    const details = await auth(api.get(`/api/trips/${tripId}`), token);
+    expect(details.status).toBe(404);
+  });
+
+  test('TC-78 uczestnik nie moze usunac wyjazdu', async () => {
+    await inviteKasia(tripId);
+
+    const res = await auth(api.delete(`/api/trips/${tripId}`), tokenKasi);
+
+    expect(res.status).toBe(403);
+  });
+  
+    test('TC-79 usuniecie wyjazdu usuwa jego harmonogram i zadania', async () => {
+    await auth(api.post(`/api/trips/${tripId}/plan`), token)
+      .send({ date: '2027-05-15', title: 'Kajaki' });
+    await auth(api.post(`/api/trips/${tripId}/tasks`), token)
+      .send({ name: 'Kupic bilety' });
+
+    const res = await auth(api.delete(`/api/trips/${tripId}`), token);
+    expect(res.status).toBe(200);
+
+    // numer wyjazdu do sprawdzenia w pgAdmin
+    console.log('TC-79 numer usunietego wyjazdu:', tripId);
+  });
+});
