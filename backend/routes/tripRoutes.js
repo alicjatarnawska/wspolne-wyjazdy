@@ -21,5 +21,9 @@ router.delete('/:tripId/members/:userId', authMiddleware, tripController.removeM
 router.use('/:tripId/plan', authMiddleware, planRoutes);
 //zakładka "Zadania"
 router.use('/:tripId/tasks', authMiddleware, taskRoutes);
+//zakładka "Wydatki"
+router.use('/:tripId/expenses', authMiddleware, expenseRoutes);
+//zakładka "Pliki i galeria"
+router.use('/:tripId/files', authMiddleware, fileRoutes);
 
 module.exports = router;

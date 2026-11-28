@@ -1,38 +1,20 @@
 const pool = require('../config/db');
+const {
+  parsePositiveInt,
+  isValidDateString,
+  validateTextField,
+} = require('../utils/validators');
+const { getTripWithRole } = require('../utils/tripHelpers');
 
-// wykrywanie potencjalnie niebezpiecznych znaczników HTML/JS (ochrona przed XSS)
-const containsScriptOrHtml = (text) =>
-  /<\s*\/?\s*(script|iframe|object|embed|style|link|meta|base|form|input|svg|math|img|video|audio|frame|frameset|applet)\b/i.test(text) ||
-  /<\s*[a-zA-Z][^>]*\bon[a-z]{2,}\s*=/i.test(text) ||
-  /(javascript|vbscript)\s*:/i.test(text);
-
-// sprawdzenie, czy ciąg "YYYY-MM-DD" jest poprawną datą kalendarzową
-const isValidDateString = (value) => {
-  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return false;
-  }
-  const [year, month, day] = value.split('-').map(Number);
-  const parsed = new Date(Date.UTC(year, month - 1, day));
-  return (
-    parsed.getUTCFullYear() === year &&
-    parsed.getUTCMonth() === month - 1 &&
-    parsed.getUTCDate() === day
-  );
-};
-
-// wspólna walidacja pól aktywności (dodawanie i edycja punktów harmonogramu)
+// Wspólna walidacja pól aktywności (dodawanie i edycja punktów harmonogramu)
 const validatePlanItemData = ({ date, time, title, description }) => {
-  if (typeof title !== 'string' || !title.trim()) {
-    return { error: 'Tytuł aktywności jest wymagany.' };
-  }
-
-  const trimmedTitle = title.trim();
-  if (title.trim().length > 150) {
-    return { error: 'Tytuł aktywności może mieć maksymalnie 150 znaków.' };
-  }
-  if (containsScriptOrHtml(trimmedTitle)) {
-    return { error: 'Tytuł aktywności nie może zawierać niebezpiecznego kodu HTML ani skryptów.' };
-  }
+  const titleCheck = validateTextField(title, {
+    requiredMsg: 'Tytuł aktywności jest wymagany.',
+    maxLength: 150,
+    maxLengthMsg: 'Tytuł aktywności może mieć maksymalnie 150 znaków.',
+    xssMsg: 'Tytuł aktywności nie może zawierać niebezpiecznego kodu HTML ani skryptów.',
+  });
+  if (titleCheck.error) return { error: titleCheck.error };
 
   if (!isValidDateString(date)) {
     return { error: 'Podaj poprawną datę w formacie RRRR-MM-DD.' };
@@ -46,52 +28,32 @@ const validatePlanItemData = ({ date, time, title, description }) => {
     normalizedTime = time.trim().slice(0, 5);
   }
 
-  let normalizedDescription = null;
-  if (description !== undefined && description !== null && description !== '') {
-    if (typeof description !== 'string') {
-      return { error: 'Opis aktywności musi być tekstem.' };
-    }
-    const trimmedDescription = description.trim();
-    if (trimmedDescription.length > 500) {
-      return { error: 'Opis aktywności może mieć maksymalnie 500 znaków.' };
-    }
-
-    if (containsScriptOrHtml(trimmedDescription)) {
-      return { error: 'Opis aktywności nie może zawierać niebezpiecznego kodu HTML ani skryptów.' };
-    }
-    normalizedDescription = trimmedDescription || null;
-  }
+  const descCheck = validateTextField(description, {
+    required: false,
+    typeMsg: 'Opis aktywności musi być tekstem.',
+    maxLength: 500,
+    maxLengthMsg: 'Opis aktywności może mieć maksymalnie 500 znaków.',
+    xssMsg: 'Opis aktywności nie może zawierać niebezpiecznego kodu HTML ani skryptów.',
+  });
+  if (descCheck.error) return { error: descCheck.error };
 
   return {
     data: {
       date,
       time: normalizedTime,
-      title: title.trim(),
-      description: normalizedDescription,
+      title: titleCheck.value,
+      description: descCheck.value,
     },
   };
-};
-
-// pobranie zakresu dat wyjazdu oraz roli zalogowanego użytkownika
-const getTripWithRole = async (tripId, userId) => {
-  const result = await pool.query(
-    `SELECT t.start_date, t.end_date, tm.role AS my_role
-     FROM trips t
-     LEFT JOIN trip_members tm
-       ON t.id = tm.trip_id AND tm.user_id = $2
-     WHERE t.id = $1`,
-    [tripId, userId]
-  );
-  return result.rows[0] || null;
 };
 
 // POBRANIE HARMONOGRAMU WYJAZDU
 // GET /api/trips/:tripId/plan
 exports.getTripPlan = async (req, res) => {
-  const tripId = Number(req.params.tripId);
+  const tripId = parsePositiveInt(req.params.tripId);
   const userId = req.user.id;
 
-  if (!Number.isInteger(tripId) || tripId <= 0) {
+  if (!tripId) {
     return res.status(400).json({ error: 'Nieprawidłowy identyfikator wyjazdu.' });
   }
 
@@ -105,7 +67,6 @@ exports.getTripPlan = async (req, res) => {
       return res.status(403).json({ error: 'Nie masz dostępu do tego wyjazdu.' });
     }
 
-    // punkty bez godziny (NULL) wyświetlają się na górze danego dnia
     const planResult = await pool.query(
       `SELECT
          id,
@@ -133,10 +94,10 @@ exports.getTripPlan = async (req, res) => {
 // DODANIE NOWEJ AKTYWNOŚCI DO HARMONOGRAMU
 // POST /api/trips/:tripId/plan
 exports.addPlanItem = async (req, res) => {
-  const tripId = Number(req.params.tripId);
+  const tripId = parsePositiveInt(req.params.tripId);
   const userId = req.user.id;
 
-  if (!Number.isInteger(tripId) || tripId <= 0) {
+  if (!tripId) {
     return res.status(400).json({ error: 'Nieprawidłowy identyfikator wyjazdu.' });
   }
 
@@ -146,7 +107,7 @@ exports.addPlanItem = async (req, res) => {
   }
 
   try {
-    const trip = await getTripWithRole(tripId, userId);
+    const trip = await getTripWithRole(tripId, userId, 't.start_date, t.end_date');
 
     if (!trip) {
       return res.status(404).json({ error: 'Nie znaleziono wyjazdu.' });
@@ -181,16 +142,16 @@ exports.addPlanItem = async (req, res) => {
 // EDYCJA AKTYWNOŚCI (data, godzina, tytuł, opis)
 // PATCH /api/trips/:tripId/plan/:itemId
 exports.updatePlanItem = async (req, res) => {
-  const tripId = Number(req.params.tripId);
-  const itemId = Number(req.params.itemId);
+  const tripId = parsePositiveInt(req.params.tripId);
+  const itemId = parsePositiveInt(req.params.itemId);
   const userId = req.user.id;
 
-  if (!Number.isInteger(tripId) || tripId <= 0 || !Number.isInteger(itemId) || itemId <= 0) {
+  if (!tripId || !itemId) {
     return res.status(400).json({ error: 'Nieprawidłowy identyfikator wyjazdu lub aktywności.' });
   }
 
   try {
-    const trip = await getTripWithRole(tripId, userId);
+    const trip = await getTripWithRole(tripId, userId, 't.start_date, t.end_date');
 
     if (!trip) {
       return res.status(404).json({ error: 'Nie znaleziono wyjazdu.' });
@@ -199,7 +160,6 @@ exports.updatePlanItem = async (req, res) => {
       return res.status(403).json({ error: 'Nie masz dostępu do tego wyjazdu.' });
     }
 
-    // pobranie obecnego stanu aktywności
     const existingResult = await pool.query(
       `SELECT id, date, LEFT(time::text, 5) AS time, title, description
        FROM plan_items
@@ -251,11 +211,11 @@ exports.updatePlanItem = async (req, res) => {
 // USUNIĘCIE AKTYWNOŚCI Z HARMONOGRAMU
 // DELETE /api/trips/:tripId/plan/:itemId
 exports.deletePlanItem = async (req, res) => {
-  const tripId = Number(req.params.tripId);
-  const itemId = Number(req.params.itemId);
+  const tripId = parsePositiveInt(req.params.tripId);
+  const itemId = parsePositiveInt(req.params.itemId);
   const userId = req.user.id;
 
-  if (!Number.isInteger(tripId) || tripId <= 0 || !Number.isInteger(itemId) || itemId <= 0) {
+  if (!tripId || !itemId) {
     return res.status(400).json({ error: 'Nieprawidłowy identyfikator wyjazdu lub aktywności.' });
   }
 

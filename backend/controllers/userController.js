@@ -1,8 +1,9 @@
 const pool = require('../config/db');
 const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
+const { normalizeAndValidateEmail, validateTextField } = require('../utils/validators');
+const { generateUserToken } = require('../utils/tokenHelper');
 
-// jednolite formatowanie obiektu użytkownika
+// formatowanie obiektu użytkownika do odpowiedzi api
 const formatUserResponse = (user) => ({
   id: user.id,
   email: user.email,
@@ -12,25 +13,11 @@ const formatUserResponse = (user) => ({
   created_at: user.created_at,
 });
 
-// generowanie nowego tokena JWT po zmianie danych konta
-const generateUserToken = (user) =>
-  jwt.sign(
-    {
-      id: user.id,
-      email: user.email,
-      display_name: user.display_name,
-      is_admin: user.is_admin,
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: '2h' }
-  );
-
-  // wspólna obsługa sprawdzenia obecnej wartości i zapisu pojedynczej kolumny
+// wspólna obsługa sprawdzenia obecnej wartości i zapisu pojedynczej kolumny
 const updateUserField = async (
   res,
   { userId, column, newValue, sameValueError, successMessage, serverError }
 ) => {
-
   const allowedColumns = ['display_name', 'email'];
   if (!allowedColumns.includes(column)) {
     throw new Error(`Niedozwolona kolumna: ${column}`);
@@ -76,14 +63,12 @@ const updateUserField = async (
   }
 };
 
-
 // POBRANIE PEŁNYCH DANYCH PROFILU, STATYSTYK ORAZ NADCHODZĄCYCH WYJAZDÓW
 // GET /api/users/me
 exports.getMe = async (req, res) => {
   const userId = req.user.id;
 
   try {
-    // podstawowe dane użytkownika z tabeli 'users'
     const userResult = await pool.query(
       'SELECT id, email, display_name, is_admin, created_at FROM users WHERE id = $1',
       [userId]
@@ -95,7 +80,6 @@ exports.getMe = async (req, res) => {
 
     const user = userResult.rows[0];
 
-    // pobranie statystyk wyjazdów oraz wyjazdów startujących w ciągu <= 7 dni
     const [statsResult, upcomingTripsResult] = await Promise.all([
       pool.query(
         `SELECT
@@ -135,26 +119,23 @@ exports.getMe = async (req, res) => {
   }
 };
 
-// ZMIANA NAZWY UŻYTKOWNIKA (NICKU)
+// ZMIANA NAZWY UŻYTKOWNIKA
 // PATCH /api/users/profile/display-name
 exports.updateDisplayName = (req, res) => {
-  const { display_name } = req.body;
+  const nameCheck = validateTextField(req.body.display_name, {
+    requiredMsg: 'Nazwa użytkownika jest wymagana.',
+    maxLength: 50,
+    maxLengthMsg: 'Nazwa użytkownika może mieć maksymalnie 50 znaków.',
+  });
 
-  if (typeof display_name !== 'string' || !display_name.trim()) {
-    return res.status(400).json({ error: 'Nazwa użytkownika jest wymagana.' });
-  }
-
-  const trimmedDisplayName = display_name.trim();
-  if (trimmedDisplayName.length > 50) {
-    return res.status(400).json({
-      error: 'Nazwa użytkownika może mieć maksymalnie 50 znaków.',
-    });
+  if (nameCheck.error) {
+    return res.status(400).json({ error: nameCheck.error });
   }
 
   return updateUserField(res, {
     userId: req.user.id,
     column: 'display_name',
-    newValue: trimmedDisplayName,
+    newValue: nameCheck.value,
     sameValueError: 'Nowa nazwa użytkownika musi różnić się od obecnej.',
     successMessage: 'Nazwa użytkownika została zaktualizowana.',
     serverError: 'Błąd serwera podczas aktualizacji nazwy użytkownika.',
@@ -164,22 +145,16 @@ exports.updateDisplayName = (req, res) => {
 // ZMIANA ADRESU E-MAIL
 // PATCH /api/users/profile/email
 exports.updateEmail = (req, res) => {
-  const { email } = req.body;
+  const emailCheck = normalizeAndValidateEmail(req.body.email);
 
-  if (typeof email !== 'string' || !email.trim()) {
-    return res.status(400).json({ error: 'Adres e-mail jest wymagany.' });
-  }
-
-  const trimmedEmail = email.toLowerCase().trim();
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(trimmedEmail) || trimmedEmail.length > 255) {
-    return res.status(400).json({ error: 'Podaj poprawny adres e-mail.' });
+  if (emailCheck.error) {
+    return res.status(400).json({ error: emailCheck.error });
   }
 
   return updateUserField(res, {
     userId: req.user.id,
     column: 'email',
-    newValue: trimmedEmail,
+    newValue: emailCheck.value,
     sameValueError: 'Nowy adres e-mail musi różnić się od obecnego.',
     successMessage: 'Adres e-mail został zaktualizowany.',
     serverError: 'Błąd serwera podczas aktualizacji adresu e-mail.',
@@ -192,20 +167,15 @@ exports.changePassword = async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   const userId = req.user.id;
 
-  // walidacja obecności i typu obu haseł
   if (
     typeof currentPassword !== 'string' || !currentPassword ||
     typeof newPassword !== 'string' || !newPassword
   ) {
-    return res.status(400).json({
-      error: 'Podaj obecne oraz nowe hasło.',
-    });
+    return res.status(400).json({ error: 'Podaj obecne oraz nowe hasło.' });
   }
 
   if (newPassword.length < 6) {
-    return res.status(400).json({
-      error: 'Nowe hasło musi mieć co najmniej 6 znaków.',
-    });
+    return res.status(400).json({ error: 'Nowe hasło musi mieć co najmniej 6 znaków.' });
   }
 
   try {
@@ -219,13 +189,11 @@ exports.changePassword = async (req, res) => {
       return res.status(404).json({ error: 'Nie znaleziono użytkownika.' });
     }
 
-    // weryfikacja obecnego hasła przed ustawieniem nowego
     const isPasswordValid = await bcrypt.compare(currentPassword, user.password_hash);
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Obecne hasło jest nieprawidłowe.' });
     }
 
-    // sprawdzenie, czy nowe hasło różni się od obecnego
     if (currentPassword === newPassword) {
       return res.status(400).json({ error: 'Nowe hasło musi różnić się od obecnego.' });
     }
@@ -249,7 +217,6 @@ exports.deleteAccount = async (req, res) => {
   const { password } = req.body;
   const userId = req.user.id;
 
-  // wymagane potwierdzenie hasłem, aby zapobiec przypadkowemu usunięciu konta
   if (typeof password !== 'string' || !password) {
     return res.status(400).json({
       error: 'Podaj aktualne hasło, aby potwierdzić usunięcie konta.',
@@ -260,7 +227,6 @@ exports.deleteAccount = async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    // pobranie hasła i weryfikacja użytkownika
     const userResult = await client.query(
       'SELECT password_hash FROM users WHERE id = $1',
       [userId]
@@ -278,7 +244,7 @@ exports.deleteAccount = async (req, res) => {
       return res.status(401).json({ error: 'Podane hasło jest nieprawidłowe.' });
     }
 
-    // sprawdzenie, czy użytkownik nie jest jedynym organizatorem wyjazdu z innymi uczestnikami
+    // sprawdzenie, czy użytkownik nie jest jedynym organizatorem wyjazdu 
     const soleOrganizerTrips = await client.query(
       `SELECT t.id, t.name
        FROM trips t
@@ -304,7 +270,7 @@ exports.deleteAccount = async (req, res) => {
       });
     }
 
-    //usunięcie pustych wyjazdów, w których użytkownik był jedynym uczestnikiem
+    // usunięcie pustych wyjazdów, w których użytkownik był jedynym uczestnikiem
     await client.query(
       `DELETE FROM trips
        WHERE id IN (
@@ -319,7 +285,6 @@ exports.deleteAccount = async (req, res) => {
       [userId]
     );
 
-    // usunięcie członkostw i samego konta użytkownika
     await client.query('DELETE FROM trip_members WHERE user_id = $1', [userId]);
     await client.query('DELETE FROM users WHERE id = $1', [userId]);
 

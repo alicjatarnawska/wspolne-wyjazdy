@@ -1,40 +1,29 @@
 const pool = require('../config/db');
+const { parsePositiveInt, validateTextField } = require('../utils/validators');
+const { getTripWithRole, getTripMemberInfo } = require('../utils/tripHelpers');
 
-// wykrywanie potencjalnie niebezpiecznych znaczników HTML/JS (ochrona przed XSS)
-const containsScriptOrHtml = (text) =>
-  /<\s*\/?\s*(script|iframe|object|embed|style|link|meta|base|form|input|svg|math|img|video|audio|frame|frameset|applet)\b/i.test(text) ||
-  /<\s*[a-zA-Z][^>]*\bon[a-z]{2,}\s*=/i.test(text) ||
-  /(javascript|vbscript)\s*:/i.test(text);
-
-// wspólna walidacja pól zadania dla tworzenia i edycji
+// Wspólna walidacja pól zadania dla tworzenia i edycji
 const validateTaskData = ({ name, assigned_user_id, due_date, status }) => {
+  const nameCheck = validateTextField(name, {
+    requiredMsg: 'Nazwa zadania jest wymagana.',
+    maxLength: 150,
+    maxLengthMsg: 'Nazwa zadania może mieć maksymalnie 150 znaków.',
+    xssMsg: 'Nazwa zadania nie może zawierać niebezpiecznego kodu HTML ani skryptów.',
+  });
+  if (nameCheck.error) return { error: nameCheck.error };
 
-  if (typeof name !== 'string' || !name.trim()) {
-    return { error: 'Nazwa zadania jest wymagana.' };
-  }
-  const trimmedName = name.trim();
-  if (trimmedName.length > 150) {
-    return { error: 'Nazwa zadania może mieć maksymalnie 150 znaków.' };
-  }
-  if (containsScriptOrHtml(trimmedName)) {
-    return { error: 'Nazwa zadania nie może zawierać niebezpiecznego kodu HTML ani skryptów.' };
-  }
-
-  // assigned_user_id - opcjonalny, ale jeśli podany, musi być liczbą całkowitą większą od 0
   let normalizedAssignedUserId = null;
   if (assigned_user_id !== undefined && assigned_user_id !== null && assigned_user_id !== '') {
-    const parsedId = Number(assigned_user_id);
-    if (!Number.isInteger(parsedId) || parsedId <= 0) {
+    const parsedId = parsePositiveInt(assigned_user_id);
+    if (!parsedId) {
       return { error: 'Wybierz poprawną osobę odpowiedzialną za zadanie.' };
     }
     normalizedAssignedUserId = parsedId;
   }
 
-  // termin wykonania - opcjonalny
   const normalizedDueDate =
     typeof due_date === 'string' && due_date.trim() ? due_date.trim() : null;
 
-  // status zadania — domyślnie 'TODO'
   const normalizedStatus = status !== undefined ? status : 'TODO';
   if (normalizedStatus !== 'TODO' && normalizedStatus !== 'DONE') {
     return { error: 'Nieprawidłowy status zadania. Dozwolone wartości: TODO lub DONE.' };
@@ -42,7 +31,7 @@ const validateTaskData = ({ name, assigned_user_id, due_date, status }) => {
 
   return {
     data: {
-      name: trimmedName,
+      name: nameCheck.value,
       assigned_user_id: normalizedAssignedUserId,
       due_date: normalizedDueDate,
       status: normalizedStatus,
@@ -50,38 +39,13 @@ const validateTaskData = ({ name, assigned_user_id, due_date, status }) => {
   };
 };
 
-// funkcja sprawdzająca istnienie wyjazdu i rolę zalogowanego użytkownika
-const getTripWithRole = async (tripId, userId) => {
-  const result = await pool.query(
-    `SELECT t.id, tm.role AS my_role
-     FROM trips t
-     LEFT JOIN trip_members tm
-       ON t.id = tm.trip_id AND tm.user_id = $2
-     WHERE t.id = $1`,
-    [tripId, userId]
-  );
-  return result.rows[0] || null;
-};
-
-// funkcja sprawdzająca, czy osoba przypisywana do zadania należy do wyjazdu
-const getTripMemberInfo = async (tripId, memberUserId) => {
-  const result = await pool.query(
-    `SELECT u.id, u.display_name, u.email
-     FROM trip_members tm
-     JOIN users u ON tm.user_id = u.id
-     WHERE tm.trip_id = $1 AND tm.user_id = $2`,
-    [tripId, memberUserId]
-  );
-  return result.rows[0] || null;
-};
-
 // POBRANIE LISTY ZADAŃ WYJAZDU
 // GET /api/trips/:tripId/tasks
 exports.getTripTasks = async (req, res) => {
-  const tripId = Number(req.params.tripId);
+  const tripId = parsePositiveInt(req.params.tripId);
   const userId = req.user.id;
 
-  if (!Number.isInteger(tripId) || tripId <= 0) {
+  if (!tripId) {
     return res.status(400).json({ error: 'Nieprawidłowy identyfikator wyjazdu.' });
   }
 
@@ -95,7 +59,6 @@ exports.getTripTasks = async (req, res) => {
       return res.status(403).json({ error: 'Nie masz dostępu do tego wyjazdu.' });
     }
 
-    // najpierw zadania do zrobienia, a potem ukończone
     const tasksResult = await pool.query(
       `SELECT
          t.id,
@@ -129,10 +92,10 @@ exports.getTripTasks = async (req, res) => {
 // DODANIE NOWEGO ZADANIA
 // POST /api/trips/:tripId/tasks
 exports.addTask = async (req, res) => {
-  const tripId = Number(req.params.tripId);
+  const tripId = parsePositiveInt(req.params.tripId);
   const userId = req.user.id;
 
-  if (!Number.isInteger(tripId) || tripId <= 0) {
+  if (!tripId) {
     return res.status(400).json({ error: 'Nieprawidłowy identyfikator wyjazdu.' });
   }
 
@@ -151,7 +114,6 @@ exports.addTask = async (req, res) => {
       return res.status(403).json({ error: 'Nie masz dostępu do tego wyjazdu.' });
     }
 
-    // sprawdzenie, czy osoba przypisywana do zadania jest uczestnikiem wyjazdu (jeśli assigned_user_id nie jest null)
     let assignee = null;
     if (data.assigned_user_id !== null) {
       assignee = await getTripMemberInfo(tripId, data.assigned_user_id);
@@ -189,11 +151,11 @@ exports.addTask = async (req, res) => {
 // EDYCJA ZADANIA LUB ZMIANA STATUSU (TODO / DONE)
 // PATCH /api/trips/:tripId/tasks/:taskId
 exports.updateTask = async (req, res) => {
-  const tripId = Number(req.params.tripId);
-  const taskId = Number(req.params.taskId);
+  const tripId = parsePositiveInt(req.params.tripId);
+  const taskId = parsePositiveInt(req.params.taskId);
   const userId = req.user.id;
 
-  if (!Number.isInteger(tripId) || tripId <= 0 || !Number.isInteger(taskId) || taskId <= 0) {
+  if (!tripId || !taskId) {
     return res.status(400).json({ error: 'Nieprawidłowy identyfikator wyjazdu lub zadania.' });
   }
 
@@ -218,7 +180,6 @@ exports.updateTask = async (req, res) => {
       return res.status(404).json({ error: 'Nie znaleziono zadania w tym wyjeździe.' });
     }
 
-    // scalenie obecnych danych z nowymi (obsługuje zarówno pełną edycję, jak i samo { status: 'DONE' })
     const current = existingResult.rows[0];
     const mergedInput = {
       name: req.body.name !== undefined ? req.body.name : current.name,
@@ -273,11 +234,11 @@ exports.updateTask = async (req, res) => {
 // USUNIĘCIE ZADANIA
 // DELETE /api/trips/:tripId/tasks/:taskId
 exports.deleteTask = async (req, res) => {
-  const tripId = Number(req.params.tripId);
-  const taskId = Number(req.params.taskId);
+  const tripId = parsePositiveInt(req.params.tripId);
+  const taskId = parsePositiveInt(req.params.taskId);
   const userId = req.user.id;
 
-  if (!Number.isInteger(tripId) || tripId <= 0 || !Number.isInteger(taskId) || taskId <= 0) {
+  if (!tripId || !taskId) {
     return res.status(400).json({ error: 'Nieprawidłowy identyfikator wyjazdu lub zadania.' });
   }
 

@@ -9,6 +9,7 @@ const pool = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
 const tripRoutes = require('./routes/tripRoutes');
 const userRoutes = require('./routes/userRoutes');
+const fileRoutes = require('./routes/fileRoutes');
 
 //główna instancja aplikacji
 const app = express();
@@ -31,6 +32,7 @@ app.get('/api/health', async (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/trips', tripRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/trips/:tripId/files', fileRoutes);
 
 //pobranie numeru portu z pliku .env lub ustawienie domyślnego
 const PORT = process.env.PORT || 5000;

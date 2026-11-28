@@ -1,11 +1,11 @@
 const pool = require('../config/db');
 const fs = require('fs/promises');
-
-// wykrywanie potencjalnie niebezpiecznych znaczników HTML/JS (ochrona przed XSS)
-const containsScriptOrHtml = (text) =>
-  /<\s*\/?\s*(script|iframe|object|embed|style|link|meta|base|form|input|svg|math|img|video|audio|frame|frameset|applet)\b/i.test(text) ||
-  /<\s*[a-zA-Z][^>]*\bon[a-z]{2,}\s*=/i.test(text) ||
-  /(javascript|vbscript)\s*:/i.test(text);
+const {
+  parsePositiveInt,
+  normalizeAndValidateEmail,
+  validateTextField,
+} = require('../utils/validators');
+const { getTripWithRole, getTripMembersList } = require('../utils/tripHelpers');
 
 // wspólna walidacja pól wyjazdu dla tworzenia oraz edycji wyjazdu
 const validateTripData = ({ name, destination, start_date, end_date, description }) => {
@@ -19,71 +19,60 @@ const validateTripData = ({ name, destination, start_date, end_date, description
     };
   }
 
-  const trimmedName = name.trim();
-  const trimmedDestination = destination.trim();
+  const nameCheck = validateTextField(name, {
+    requiredMsg: 'Nazwa wyjazdu jest wymagana.',
+    maxLength: 100,
+    maxLengthMsg: 'Nazwa wyjazdu może mieć maksymalnie 100 znaków.',
+    xssMsg: 'Nazwa oraz miejsce docelowe nie mogą zawierać niebezpiecznego kodu HTML ani skryptów.',
+  });
+  if (nameCheck.error) return { error: nameCheck.error };
 
-  if (trimmedName.length > 100) {
-    return { error: 'Nazwa wyjazdu może mieć maksymalnie 100 znaków.' };
-  }
-
-  if (trimmedDestination.length > 100) {
-    return { error: 'Miejsce docelowe może mieć maksymalnie 100 znaków.' };
-  }
-
-  if (containsScriptOrHtml(trimmedName) || containsScriptOrHtml(trimmedDestination)) {
-    return { error: 'Nazwa oraz miejsce docelowe nie mogą zawierać niebezpiecznego kodu HTML ani skryptów.' };
-  }
+  const destCheck = validateTextField(destination, {
+    requiredMsg: 'Miejsce docelowe jest wymagane.',
+    maxLength: 100,
+    maxLengthMsg: 'Miejsce docelowe może mieć maksymalnie 100 znaków.',
+    xssMsg: 'Nazwa oraz miejsce docelowe nie mogą zawierać niebezpiecznego kodu HTML ani skryptów.',
+  });
+  if (destCheck.error) return { error: destCheck.error };
 
   if (end_date < start_date) {
     return { error: 'Data zakończenia wyjazdu nie może być wcześniejsza niż data rozpoczęcia.' };
   }
 
-  // walidacja opcjonalnego opisu wyjazdu (maksymalnie 500 znaków, brak HTML/JS)
-  let normalizedDescription = null;
-  if (description !== undefined && description !== null && description !== '') {
-    if (typeof description !== 'string') {
-      return { error: 'Opis wyjazdu musi być tekstem.' };
-    }
-
-    const trimmedDescription = description.trim();
-    if (trimmedDescription.length > 500) {
-      return { error: 'Opis wyjazdu może mieć maksymalnie 500 znaków.' };
-    }
-
-    if (containsScriptOrHtml(trimmedDescription)) {
-      return { error: 'Opis wyjazdu nie może zawierać niebezpiecznego kodu HTML ani skryptów.' };
-    }
-
-    normalizedDescription = trimmedDescription || null;
-  }
+  const descCheck = validateTextField(description, {
+    required: false,
+    typeMsg: 'Opis wyjazdu musi być tekstem.',
+    maxLength: 500,
+    maxLengthMsg: 'Opis wyjazdu może mieć maksymalnie 500 znaków.',
+    xssMsg: 'Opis wyjazdu nie może zawierać niebezpiecznego kodu HTML ani skryptów.',
+  });
+  if (descCheck.error) return { error: descCheck.error };
 
   return {
     data: {
-      name: trimmedName,
-      destination: trimmedDestination,
+      name: nameCheck.value,
+      destination: destCheck.value,
       start_date,
       end_date,
-      description: normalizedDescription,
+      description: descCheck.value,
     },
   };
 };
 
-// tworzenie nowego wyjazdu
+// TWORZENIE NOWEGO WYJAZDU
 // POST /api/trips
 exports.createTrip = async (req, res) => {
-
   const userId = req.user.id;
 
   const { error, data } = validateTripData(req.body);
   if (error) {
     return res.status(400).json({ error });
   }
-  // połączenie z bazą danych i rozpoczęcie transakcji
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    // zapis nowego wyjazdu do tabeli 'trips'
     const tripResult = await client.query(
       `INSERT INTO trips (name, destination, start_date, end_date, description)
        VALUES ($1, $2, $3, $4, $5)
@@ -92,13 +81,12 @@ exports.createTrip = async (req, res) => {
     );
     const newTrip = tripResult.rows[0];
 
-    // dodanie twórcy wyjazdu do tabeli 'trip_members' z rolą 'ORGANIZER'
     await client.query(
       `INSERT INTO trip_members (trip_id, user_id, role)
        VALUES ($1, $2, 'ORGANIZER')`,
       [newTrip.id, userId]
     );
-    // zatwierdzenie transakcji
+
     await client.query('COMMIT');
 
     res.status(201).json({
@@ -112,50 +100,41 @@ exports.createTrip = async (req, res) => {
         error: 'Data zakończenia wyjazdu nie może być wcześniejsza niż data rozpoczęcia.',
       });
     }
+    if (err.code === '22007' || err.code === '22008') {
+      return res.status(400).json({
+        error: 'Nieprawidłowy format daty rozpoczęcia lub zakończenia wyjazdu.',
+      });
+    }
     console.error(err);
     res.status(500).json({ error: 'Nie udało się utworzyć wyjazdu.' });
   } finally {
-    //zwolnienie klienta z puli połączeń niezależnie od wyniku operacji
     client.release();
   }
-}; 
+};
 
-// edycja danych wyjazdu (tylko dla organizatora)
+// EDYCJA DANYCH WYJAZDU (tylko dla organizatora)
 // PATCH /api/trips/:tripId
 exports.updateTrip = async (req, res) => {
-  const tripId = Number(req.params.tripId);
+  const tripId = parsePositiveInt(req.params.tripId);
   const userId = req.user.id;
 
-  if (!Number.isInteger(tripId) || tripId <= 0) {
+  if (!tripId) {
     return res.status(400).json({ error: 'Nieprawidłowy identyfikator wyjazdu.' });
   }
 
   try {
-    // pobranie obecnych danych wyjazdu oraz roli użytkownika
-    const tripResult = await pool.query(
-      `SELECT t.*, tm.role AS my_role
-       FROM trips t
-       LEFT JOIN trip_members tm
-         ON t.id = tm.trip_id AND tm.user_id = $2
-       WHERE t.id = $1`,
-      [tripId, userId]
-    );
+    const currentTrip = await getTripWithRole(tripId, userId, 't.*');
 
-    if (tripResult.rows.length === 0) {
+    if (!currentTrip) {
       return res.status(404).json({ error: 'Nie znaleziono wyjazdu.' });
     }
-
-    const currentTrip = tripResult.rows[0];
-
     if (!currentTrip.my_role) {
       return res.status(403).json({ error: 'Nie masz dostępu do tego wyjazdu.' });
     }
-
     if (currentTrip.my_role !== 'ORGANIZER') {
       return res.status(403).json({ error: 'Tylko organizator wyjazdu może edytować jego dane.' });
     }
 
-    // scalenie obecnych pól z nowymi (obsługuje pełny formularz edycji oraz pojedyncze pola)
     const mergedInput = {
       name: req.body.name !== undefined ? req.body.name : currentTrip.name,
       destination: req.body.destination !== undefined ? req.body.destination : currentTrip.destination,
@@ -169,8 +148,7 @@ exports.updateTrip = async (req, res) => {
       return res.status(400).json({ error });
     }
 
-    // ochrona spójności harmonogramu: jeśli skrócono termin wyjazdu, sprawdzamy czy w bazie
-    // nie zostaną punkty harmonogramu poza nowym zakresem dat
+    // Ochrona spójności harmonogramu przed skróceniem terminu wyjazdu
     const outOfRangeItems = await pool.query(
       `SELECT COUNT(*)::int AS count
        FROM plan_items
@@ -205,20 +183,25 @@ exports.updateTrip = async (req, res) => {
         error: 'Data zakończenia wyjazdu nie może być wcześniejsza niż data rozpoczęcia.',
       });
     }
+    if (err.code === '22007' || err.code === '22008') {
+      return res.status(400).json({
+        error: 'Nieprawidłowy format daty rozpoczęcia lub zakończenia wyjazdu.',
+      });
+    }
     console.error(err);
     res.status(500).json({ error: 'Błąd serwera podczas aktualizacji wyjazdu.' });
   }
 };
 
-// usunięcie uczestnika przez organizatora lub samodzielne opuszczenie wyjazdu
-// DELETE /api/trips/:tripId/members/:userId (oraz /members/me dla opuszczenia wyjazdu przez siebie)
+// USUNIĘCIE UCZESTNIKA LUB SAMODZIELNE OPUSZCZENIE WYJAZDU
+// DELETE /api/trips/:tripId/members/:userId (oraz /members/me)
 exports.removeMember = async (req, res) => {
-  const tripId = Number(req.params.tripId);
+  const tripId = parsePositiveInt(req.params.tripId);
   const requesterId = req.user.id;
   const targetUserId =
-    req.params.userId === 'me' ? requesterId : Number(req.params.userId);
+    req.params.userId === 'me' ? requesterId : parsePositiveInt(req.params.userId);
 
-  if (!Number.isInteger(tripId) || tripId <= 0 || !Number.isInteger(targetUserId) || targetUserId <= 0) {
+  if (!tripId || !targetUserId) {
     return res.status(400).json({
       error: 'Nieprawidłowy identyfikator wyjazdu lub użytkownika.',
     });
@@ -228,14 +211,12 @@ exports.removeMember = async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    //sprawdzenie, czy wyjazd w ogóle istnieje
     const tripCheck = await client.query('SELECT id FROM trips WHERE id = $1', [tripId]);
     if (tripCheck.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Nie znaleziono wyjazdu.' });
     }
 
-    // pobranie wszystkich członków wyjazdu w jednym zapytaniu, aby sprawdzić role obu użytkowników oraz liczbę organizatorów
     const membersResult = await client.query(
       'SELECT user_id, role FROM trip_members WHERE trip_id = $1',
       [tripId]
@@ -256,7 +237,6 @@ exports.removeMember = async (req, res) => {
 
     const isSelfLeave = requesterId === targetUserId;
 
-    //jeśli ktoś próbuje usunąć inną osobę, musi być organizatorem
     if (!isSelfLeave && requesterMember.role !== 'ORGANIZER') {
       await client.query('ROLLBACK');
       return res.status(403).json({
@@ -264,7 +244,6 @@ exports.removeMember = async (req, res) => {
       });
     }
 
-    //wyjazd nie może zostać zupełnie pusty bez żadnego uczestnika
     if (members.length === 1) {
       await client.query('ROLLBACK');
       return res.status(409).json({
@@ -272,7 +251,6 @@ exports.removeMember = async (req, res) => {
       });
     }
 
-    // zabezpieczenie przed pozostawieniem wyjazdu bez żadnego organizatora
     const organizers = members.filter((m) => m.role === 'ORGANIZER');
     if (targetMember.role === 'ORGANIZER' && organizers.length <= 1) {
       await client.query('ROLLBACK');
@@ -281,7 +259,7 @@ exports.removeMember = async (req, res) => {
       });
     }
 
-   // odpięcie zadań odchodzącego uczestnika (stają się nieprzypisane)
+    // Odpięcie zadań odchodzącego uczestnika (stają się nieprzypisane)
     await client.query(
       `UPDATE tasks
        SET assigned_user_id = NULL
@@ -289,7 +267,6 @@ exports.removeMember = async (req, res) => {
       [tripId, targetUserId]
     );
 
-    // usunięcie rekordu z tabeli 'trip_members'
     await client.query(
       'DELETE FROM trip_members WHERE trip_id = $1 AND user_id = $2',
       [tripId, targetUserId]
@@ -298,9 +275,7 @@ exports.removeMember = async (req, res) => {
     await client.query('COMMIT');
 
     res.status(200).json({
-      message: isSelfLeave
-        ? 'Opuszczono wyjazd.'
-        : 'Uczestnik został usunięty z wyjazdu.',
+      message: isSelfLeave ? 'Opuszczono wyjazd.' : 'Uczestnik został usunięty z wyjazdu.',
       removedUserId: targetUserId,
       leftTrip: isSelfLeave,
     });
@@ -313,51 +288,36 @@ exports.removeMember = async (req, res) => {
   }
 };
 
-// usunięcie wyjazdu wraz ze wszystkimi powiązanymi danymi (tylko dla organizatora)
+// USUNIĘCIE WYJAZDU WRAZ ZE WSZYSTKIMI POWIĄZANYMI DANYMI (tylko dla organizatora)
 // DELETE /api/trips/:tripId
 exports.deleteTrip = async (req, res) => {
-  const tripId = Number(req.params.tripId);
+  const tripId = parsePositiveInt(req.params.tripId);
   const userId = req.user.id;
 
-  if (!Number.isInteger(tripId) || tripId <= 0) {
+  if (!tripId) {
     return res.status(400).json({ error: 'Nieprawidłowy identyfikator wyjazdu.' });
   }
 
   try {
-    //sprawdzenie, czy wyjazd istnieje oraz czy zalogowany użytkownik jest jego organizatorem
-    const tripResult = await pool.query(
-      `SELECT t.id, tm.role AS my_role
-       FROM trips t
-       LEFT JOIN trip_members tm
-         ON t.id = tm.trip_id AND tm.user_id = $2
-       WHERE t.id = $1`,
-      [tripId, userId]
-    );
+    const trip = await getTripWithRole(tripId, userId);
 
-    if (tripResult.rows.length === 0) {
+    if (!trip) {
       return res.status(404).json({ error: 'Nie znaleziono wyjazdu.' });
     }
-
-    const trip = tripResult.rows[0];
-
     if (!trip.my_role) {
       return res.status(403).json({ error: 'Nie masz dostępu do tego wyjazdu.' });
     }
-
     if (trip.my_role !== 'ORGANIZER') {
       return res.status(403).json({ error: 'Tylko organizator wyjazdu może go usunąć.' });
     }
 
-    // pobranie ścieżek plików przypisanych do wyjazdu przed usunięciem rekordów z bazy
     const filesResult = await pool.query(
       'SELECT path FROM files WHERE trip_id = $1',
       [tripId]
     );
 
-    // usunięcie wyjazdu z bazy
     await pool.query('DELETE FROM trips WHERE id = $1', [tripId]);
 
-    // uunięcie fizycznych plików z dysku serwera
     if (filesResult.rows.length > 0) {
       await Promise.allSettled(
         filesResult.rows.map((file) => fs.unlink(file.path))
@@ -374,10 +334,9 @@ exports.deleteTrip = async (req, res) => {
   }
 };
 
-// pobranie listy wyjazdów użytkownika
+// POBRANIE LISTY WYJAZDÓW UŻYTKOWNIKA
 // GET /api/trips
 exports.getUserTrips = async (req, res) => {
-    // pobranie id użytkownika z tokena JWT
   const userId = req.user.id;
 
   try {
@@ -397,40 +356,38 @@ exports.getUserTrips = async (req, res) => {
   }
 };
 
-// dodawanie nowego uczestnika do wyjazdu (tylko dla organizatora)
+// DODAWANIE NOWEGO UCZESTNIKA DO WYJAZDU (tylko dla organizatora)
 // POST /api/trips/:tripId/members
 exports.inviteMember = async (req, res) => {
-    // pobranie ID wyjazdu z parametrów ścieżki URL, e-maila z body oraz ID osoby zapraszającej z tokena JWT
-  const tripId = Number(req.params.tripId);
-  const { email } = req.body;
+  const tripId = parsePositiveInt(req.params.tripId);
   const requesterId = req.user.id;
 
-  if (!Number.isInteger(tripId)) {
+  if (!tripId) {
     return res.status(400).json({ error: 'Nieprawidłowy identyfikator wyjazdu.' });
   }
 
-  if (typeof email !== 'string' || !email.trim()) {
-    return res.status(400).json({ error: 'Podaj adres e-mail zapraszanego użytkownika.' });
+  const emailCheck = normalizeAndValidateEmail(
+    req.body.email,
+    'Podaj adres e-mail zapraszanego użytkownika.'
+  );
+  if (emailCheck.error) {
+    return res.status(400).json({ error: emailCheck.error });
   }
 
   try {
-    // sprawdzenie, czy osoba wysyłająca żądanie jest organizatorem wyjazdu
-    const organizerCheck = await pool.query(
-      `SELECT role FROM trip_members
-       WHERE trip_id = $1 AND user_id = $2 AND role = 'ORGANIZER'`,
-      [tripId, requesterId]
-    );
-    // czy użytkownik jest organizatorem wyjazdu, jeśli nie to zwrócenie błędu 403
-    if (organizerCheck.rows.length === 0) {
+    const trip = await getTripWithRole(tripId, requesterId);
+    if (!trip) {
+      return res.status(404).json({ error: 'Nie znaleziono wyjazdu.' });
+    }
+    if (trip.my_role !== 'ORGANIZER') {
       return res.status(403).json({
         error: 'Tylko organizator wyjazdu może dodawać nowych uczestników.',
       });
     }
 
-    // wyszukanie zapraszanego użytkownika po adresie e-mail
     const userResult = await pool.query(
       'SELECT id, email, display_name FROM users WHERE email = $1',
-      [email.toLowerCase().trim()]
+      [emailCheck.value]
     );
 
     if (userResult.rows.length === 0) {
@@ -441,7 +398,6 @@ exports.inviteMember = async (req, res) => {
 
     const invitedUser = userResult.rows[0];
 
-    // zapisanie nowego uczestnika z rolą PARTICIPANT
     await pool.query(
       `INSERT INTO trip_members (trip_id, user_id, role)
        VALUES ($1, $2, 'PARTICIPANT')`,
@@ -458,7 +414,6 @@ exports.inviteMember = async (req, res) => {
       },
     });
   } catch (err) {
-    // osoba już należy do tego wyjazdu (naruszenie klucza głownego w tabeli 'trip_members')
     if (err.code === '23505') {
       return res.status(409).json({ error: 'Ten użytkownik jest już uczestnikiem wyjazdu.' });
     }
@@ -467,41 +422,22 @@ exports.inviteMember = async (req, res) => {
   }
 };
 
-// pomocnicza funkcja sprawdzająca przynależność i rolę użytkownika w wyjeździe
-const getUserTripRole = async (tripId, userId) => {
-  const result = await pool.query(
-    'SELECT role FROM trip_members WHERE trip_id = $1 AND user_id = $2',
-    [tripId, userId]
-  );
-  return result.rows[0]?.role || null;
-};
-
-// pobranie samych szczegółów wyjazdu
+// POBRANIE SZCZEGÓŁÓW WYJAZDU
 // GET /api/trips/:tripId
 exports.getTripDetails = async (req, res) => {
-  const tripId = Number(req.params.tripId);
+  const tripId = parsePositiveInt(req.params.tripId);
   const userId = req.user.id;
 
-  if (!Number.isInteger(tripId) || tripId <= 0) {
+  if (!tripId) {
     return res.status(400).json({ error: 'Nieprawidłowy identyfikator wyjazdu.' });
   }
 
   try {
-    const tripResult = await pool.query(
-      `SELECT t.*, tm.role AS my_role
-       FROM trips t
-       LEFT JOIN trip_members tm
-         ON t.id = tm.trip_id AND tm.user_id = $2
-       WHERE t.id = $1`,
-      [tripId, userId]
-    );
+    const trip = await getTripWithRole(tripId, userId, 't.*');
 
-    if (tripResult.rows.length === 0) {
+    if (!trip) {
       return res.status(404).json({ error: 'Nie znaleziono wyjazdu.' });
     }
-
-    const trip = tripResult.rows[0];
-
     if (!trip.my_role) {
       return res.status(403).json({ error: 'Nie masz dostępu do tego wyjazdu.' });
     }
@@ -513,43 +449,31 @@ exports.getTripDetails = async (req, res) => {
   }
 };
 
-// pobranie listy uczestników wyjazdu (zakładka "Uczestnicy")
+// POBRANIE LISTY UCZESTNIKÓW WYJAZDU
 // GET /api/trips/:tripId/members
 exports.getTripMembers = async (req, res) => {
-  const tripId = Number(req.params.tripId);
+  const tripId = parsePositiveInt(req.params.tripId);
   const userId = req.user.id;
 
-  if (!Number.isInteger(tripId) || tripId <= 0) {
+  if (!tripId) {
     return res.status(400).json({ error: 'Nieprawidłowy identyfikator wyjazdu.' });
   }
 
   try {
-    // sprawdzenie, czy zalogowany użytkownik należy do tego wyjazdu
-    const myRole = await getUserTripRole(tripId, userId);
+    const trip = await getTripWithRole(tripId, userId);
 
-    if (!myRole) {
+    if (!trip) {
+      return res.status(404).json({ error: 'Nie znaleziono wyjazdu.' });
+    }
+    if (!trip.my_role) {
       return res.status(403).json({ error: 'Nie masz dostępu do tego wyjazdu.' });
     }
 
-    const membersResult = await pool.query(
-      `SELECT
-         u.id,
-         u.email,
-         u.display_name,
-         tm.role,
-         tm.joined_at
-       FROM trip_members tm
-       JOIN users u ON tm.user_id = u.id
-       WHERE tm.trip_id = $1
-       ORDER BY
-         CASE WHEN tm.role = 'ORGANIZER' THEN 0 ELSE 1 END,
-         tm.joined_at ASC`,
-      [tripId]
-    );
+    const members = await getTripMembersList(tripId);
 
     res.status(200).json({
-      my_role: myRole,
-      members: membersResult.rows,
+      my_role: trip.my_role,
+      members,
     });
   } catch (err) {
     console.error(err);
@@ -557,17 +481,15 @@ exports.getTripMembers = async (req, res) => {
   }
 };
 
-
-// zmiana roli uczestnika wyjazdu (tylko dla organizatora)
+// ZMIANA ROLI UCZESTNIKA WYJAZDU (tylko dla organizatora)
 // PATCH /api/trips/:tripId/members/:userId
 exports.updateMemberRole = async (req, res) => {
-  // pobranie ID wyjazdu i ID uczestnika z URL, nowej roli z body oraz ID osoby wykonującej z JWT
-  const tripId = Number(req.params.tripId);
-  const targetUserId = Number(req.params.userId);
+  const tripId = parsePositiveInt(req.params.tripId);
+  const targetUserId = parsePositiveInt(req.params.userId);
   const requesterId = req.user.id;
   const { role } = req.body;
 
-  if (!Number.isInteger(tripId) || !Number.isInteger(targetUserId)) {
+  if (!tripId || !targetUserId) {
     return res.status(400).json({
       error: 'Nieprawidłowy identyfikator wyjazdu lub użytkownika.',
     });
@@ -581,20 +503,16 @@ exports.updateMemberRole = async (req, res) => {
   }
 
   try {
-    // sprawdzenie, czy osoba wysyłająca żądanie jest organizatorem tego wyjazdu
-    const organizerCheck = await pool.query(
-      `SELECT role FROM trip_members
-       WHERE trip_id = $1 AND user_id = $2 AND role = 'ORGANIZER'`,
-      [tripId, requesterId]
-    );
-
-    if (organizerCheck.rows.length === 0) {
+    const trip = await getTripWithRole(tripId, requesterId);
+    if (!trip) {
+      return res.status(404).json({ error: 'Nie znaleziono wyjazdu.' });
+    }
+    if (trip.my_role !== 'ORGANIZER') {
       return res.status(403).json({
         error: 'Tylko organizator wyjazdu może zmieniać role uczestników.',
       });
     }
 
-    // sprawdzenie, czy docelowy użytkownik należy do tego wyjazdu
     const memberCheck = await pool.query(
       `SELECT role FROM trip_members
        WHERE trip_id = $1 AND user_id = $2`,
@@ -607,7 +525,6 @@ exports.updateMemberRole = async (req, res) => {
       });
     }
 
-    // zabezpieczenie przed odebraniem roli ostatniemu organizatorowi wyjazdu
     if (memberCheck.rows[0].role === 'ORGANIZER' && role === 'PARTICIPANT') {
       const organizersCount = await pool.query(
         `SELECT COUNT(*)::int AS count FROM trip_members
@@ -622,7 +539,6 @@ exports.updateMemberRole = async (req, res) => {
       }
     }
 
-    // aktualizacja roli w tabeli 'trip_members'
     await pool.query(
       `UPDATE trip_members
        SET role = $1
@@ -630,7 +546,6 @@ exports.updateMemberRole = async (req, res) => {
       [role, tripId, targetUserId]
     );
 
-    // pobranie zaktualizowanego obiektu uczestnika
     const updatedMember = await pool.query(
       `SELECT u.id, u.email, u.display_name, tm.role
        FROM trip_members tm
